@@ -42,6 +42,9 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
@@ -167,6 +170,7 @@
         const Info = (p) => <IconProto {...p} d={<><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></>} />
         const ChevronDown = (p) => <IconProto {...p} d={<><path d="m6 9 6 6 6-6" /></>} />
         const Save = (p) => <IconProto {...p} d={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>} />
+        const ShareIcon = (p) => <IconProto {...p} d={<><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></>} />
 
 
         // --- UTILS ---
@@ -408,36 +412,26 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
             const sortedPlayers = useMemo(() => {
                 let list = [...players];
 
-                // Global Filter by Name
-                if (searchTerm) {
-                    list = list.filter(p => normalizeName(p.name).includes(normalizeName(searchTerm)));
-                }
-
-                // Filter by Tournament (if selected)
+                // 1. Calculate Display Points based on Tournament Filter
                 if (selectedTournament !== 'ALL') {
                     const tourneyObj = localTournaments.find(t => t.id === selectedTournament);
                     if (tourneyObj) {
-                        // Filter participants and calculate specific points
                         list = list.map(p => {
-                            // Calculate points ONLY for this tournament
                             const tourneyPoints = p.history
                                 ? p.history.filter(h => h.tournament === tourneyObj.name)
                                     .reduce((sum, h) => sum + h.points, 0)
                                 : 0;
-
                             return { ...p, displayPoints: tourneyPoints };
-                        }).filter(p => p.displayPoints > 0); // Only show players who gained points
+                        }).filter(p => p.displayPoints > 0);
                     }
                 } else {
-                    // Reset display points to normal points for Global View
                     list = list.map(p => ({ ...p, displayPoints: p.points }));
                 }
 
-                return list.sort((a, b) => {
-                    // Sort by displayPoints (which is either global points or tournament points)
+                // 2. Sort the full list
+                list.sort((a, b) => {
                     const pointsA = a.displayPoints !== undefined ? a.displayPoints : a.points;
                     const pointsB = b.displayPoints !== undefined ? b.displayPoints : b.points;
-
                     if (pointsB !== pointsA) return pointsB - pointsA;
 
                     // Tie-breaker: Recent Win (Global)
@@ -445,6 +439,33 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                     const lastWinB = b.wins && b.wins.length > 0 ? Math.max(...b.wins) : 0;
                     return lastWinB - lastWinA;
                 });
+
+                // 3. Assign Real Rank (handling ties)
+                // We iterate and assign ranks. If A == B, they get same rank.
+                for (let i = 0; i < list.length; i++) {
+                    if (i > 0) {
+                        const prev = list[i - 1];
+                        const curr = list[i];
+                        const prevPts = prev.displayPoints !== undefined ? prev.displayPoints : prev.points;
+                        const currPts = curr.displayPoints !== undefined ? curr.displayPoints : curr.points;
+
+                        // Check if strictly equal (points only for visual grouping as requested)
+                        if (prevPts === currPts) {
+                            list[i].realRank = list[i - 1].realRank; // Same as previous
+                        } else {
+                            list[i].realRank = i + 1; // Strict position (1, 1, 3)
+                        }
+                    } else {
+                        list[i].realRank = 1;
+                    }
+                }
+
+                // 4. Filter by Search Term (Rank stays attached)
+                if (searchTerm) {
+                    list = list.filter(p => normalizeName(p.name).includes(normalizeName(searchTerm)));
+                }
+
+                return list;
             }, [players, searchTerm, selectedTournament, localTournaments]);
 
             const topPlayer = sortedPlayers.length > 0 ? sortedPlayers[0] : null;
@@ -465,10 +486,10 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                                 </button>
                             </div>
 
-                            <div className="max-w-4xl mx-auto text-center relative z-10">
-                                <h1 className="text-6xl md:text-7xl font-black mb-2 tracking-tighter">
+                            <div className="max-w-4xl mx-auto text-center relative z-10" id="capture-area">
+                                <h1 className="text-4xl md:text-7xl font-black mb-2 tracking-tighter">
                                     <span className="bg-gradient-to-r from-white via-blue-100 to-gray-400 bg-clip-text text-transparent">LIGA</span>
-                                    <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-glow ml-4">MULTISPORT</span>
+                                    <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-glow ml-2 md:ml-4">MULTISPORT</span>
                                 </h1>
                                 <p className="text-blue-200/60 uppercase tracking-[0.3em] font-bold text-sm mb-12">Paso de Ecuador 25/26</p>
 
@@ -531,7 +552,7 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                                 <PlayerCard
                                     key={player.id}
                                     player={player}
-                                    rank={idx + 1}
+                                    rank={player.realRank}
                                     onClick={() => setSelectedPlayer(players.find(p => p.id === player.id))}
                                 />
                             ))}
@@ -544,10 +565,50 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                         </div>
 
                         {/* FOOTER BUTTONS */}
-                        <div className="fixed bottom-6 right-6 z-30">
+                        <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+                            <button
+                                onClick={async () => {
+                                    const element = document.body; // Capture full body
+                                    try {
+                                        const canvas = await html2canvas(element, {
+                                            backgroundColor: '#0a0a0f',
+                                            ignoreElements: (node) => node.tagName === 'BUTTON' // Hide buttons in screenshot
+                                        });
+
+                                        canvas.toBlob(async (blob) => {
+                                            const file = new File([blob], "liga-multisport.png", { type: "image/png" });
+
+                                            // Try Native Share
+                                            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                                                try {
+                                                    await navigator.share({
+                                                        files: [file],
+                                                        title: 'Liga Multisport',
+                                                        text: '¡Mira la clasificación actual!'
+                                                    });
+                                                } catch (err) {
+                                                    if (err.name !== 'AbortError') console.error(err);
+                                                }
+                                            } else {
+                                                // Fallback Download
+                                                const link = document.createElement('a');
+                                                link.download = 'liga-multisport.png';
+                                                link.href = canvas.toDataURL();
+                                                link.click();
+                                            }
+                                        });
+                                    } catch (e) {
+                                        alert("No se pudo generar la imagen: " + e.message);
+                                    }
+                                }}
+                                className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-all shadow-lg shadow-indigo-500/30 transform hover:scale-110"
+                            >
+                                <ShareIcon className="w-5 h-5" />
+                            </button>
+
                             <button
                                 onClick={() => setView('login')}
-                                className="w-12 h-12 rounded-full bg-primary hover:bg-primary/80 text-white flex items-center justify-center transition-all shadow-lg shadow-primary/30 transform hover:scale-110"
+                                className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-white/10 text-white flex items-center justify-center transition-all shadow-lg transform hover:scale-110"
                             >
                                 <Shield className="w-5 h-5" />
                             </button>
