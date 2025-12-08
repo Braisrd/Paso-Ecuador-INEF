@@ -190,9 +190,9 @@
         const INITIAL_DESCRIPTION = `Se trata de una liga individual en la que daremos 100€ a la persona ganadora al final del curso.
 Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos obtenidos:
 
-• **+1 punto** por participar
-• **+3 puntos** por quedar segundo/a
-• **+5 puntos** por quedar primero/a`;
+• +1 punto por participar
+• +3 puntos por quedar segundo/a
+• +5 puntos por quedar primero/a`;
 
 
         // --- COMPONENTS ---
@@ -280,7 +280,7 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                             if (data.description) setDescription(data.description);
                         } else {
                             // Create initial settings document
-                            const initialPassword = "PasoEcuador2526!";
+                            const initialPassword = "InefSport2526";
                             await window.setDoc(docRef, {
                                 password: initialPassword,
                                 description: INITIAL_DESCRIPTION
