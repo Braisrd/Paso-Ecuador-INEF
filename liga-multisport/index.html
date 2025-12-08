@@ -251,8 +251,8 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
             // Data
             const [players, setPlayers] = useState([]);
             const [localTournaments, setLocalTournaments] = useState([]);
-            const [description, setDescription] = useState(() => localStorage.getItem('liga_description') || INITIAL_DESCRIPTION);
-            const [password, setPassword] = useState(() => localStorage.getItem('liga_password') || "4321");
+            const [description, setDescription] = useState(INITIAL_DESCRIPTION);
+            const [password, setPassword] = useState("4321");
 
             // Interaction
             const [searchTerm, setSearchTerm] = useState('');
@@ -265,34 +265,36 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
 
             // --- FIREBASE SYNC ---
 
-            // Load global password from Firestore
+            // Load global settings (password and description) from Firestore
             useEffect(() => {
                 if (!window.db) return;
 
-                const loadPassword = async () => {
+                const loadSettings = async () => {
                     try {
                         const docRef = window.doc(window.db, "settings", "admin");
                         const docSnap = await window.getDoc(docRef);
 
                         if (docSnap.exists()) {
-                            const pwd = docSnap.data().password;
-                            setPassword(pwd);
+                            const data = docSnap.data();
+                            if (data.password) setPassword(data.password);
+                            if (data.description) setDescription(data.description);
                         } else {
-                            // Create initial password document with a secure default
+                            // Create initial settings document
                             const initialPassword = "PasoEcuador2526!";
-                            await window.setDoc(docRef, { password: initialPassword });
+                            await window.setDoc(docRef, {
+                                password: initialPassword,
+                                description: INITIAL_DESCRIPTION
+                            });
                             setPassword(initialPassword);
-                            alert("Contraseña inicial creada: PasoEcuador2526! - Por favor cámbiala en Configuración");
+                            setDescription(INITIAL_DESCRIPTION);
+                            alert("Configuración inicial creada: Contraseña = PasoEcuador2526! - Por favor cámbiala en Configuración");
                         }
                     } catch (e) {
-                        console.error("Error loading password:", e);
-                        // Fallback to localStorage for backward compatibility
-                        const fallback = localStorage.getItem('liga_password') || "4321";
-                        setPassword(fallback);
+                        console.error("Error loading settings:", e);
                     }
                 };
 
-                loadPassword();
+                loadSettings();
             }, []);
 
             useEffect(() => {
@@ -796,7 +798,7 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                 // Save to Firestore
                 try {
                     const docRef = window.doc(window.db, "settings", "admin");
-                    await window.setDoc(docRef, { password: newPass });
+                    await window.updateDoc(docRef, { password: newPass });
                     setPassword(newPass);
                     alert("Contraseña cambiada exitosamente y sincronizada en la nube");
                     setNewPass('');
@@ -829,7 +831,16 @@ Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos 
                                         <h3 className="text-gray-400 uppercase text-xs font-bold">Descripción de la Liga</h3>
                                         <textarea className="w-full h-40 bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-primary focus:outline-none"
                                             value={descInput} onChange={e => setDescInput(e.target.value)} />
-                                        <button onClick={() => { setDescription(descInput); alert("Descripción actualizada"); }} className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg text-sm font-bold flex items-center gap-2">
+                                        <button onClick={async () => {
+                                            try {
+                                                const docRef = window.doc(window.db, "settings", "admin");
+                                                await window.updateDoc(docRef, { description: descInput });
+                                                setDescription(descInput);
+                                                alert("Descripción actualizada y sincronizada en la nube");
+                                            } catch (e) {
+                                                alert("Error guardando descripción: " + e.message);
+                                            }
+                                        }} className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg text-sm font-bold flex items-center gap-2">
                                             <Save className="w-4 h-4" /> Guardar Texto
                                         </button>
                                     </div>
