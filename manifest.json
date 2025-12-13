@@ -1,10 +1,17 @@
 {
     "name": "Paso de Ecuador INEF 25/26",
     "short_name": "Paso Ecuador",
+    "description": "App oficial del Paso de Ecuador INEF 25/26. Eventos, inscripciones y Liga Multisport.",
     "start_url": "./index.html",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#38bdf8",
+    "orientation": "portrait",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "categories": [
+        "events",
+        "social",
+        "sports"
+    ],
     "icons": [
         {
             "src": "logo.png",

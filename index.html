@@ -5,6 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paso de Ecuador 25/26 - INEF</title>
+    <meta name="description"
+        content="Página oficial del Paso de Ecuador INEF 25/26. Consulta los próximos eventos, inscríbete en torneos y sigue la clasificación de la Liga Multisport en tiempo real.">
+    <meta name="keywords"
+        content="paso ecuador, inef, liga multisport, torneos, fiestas, clasificación, eventos universitarios">
+    <meta name="theme-color" content="#0a0a0f">
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://braisrd.github.io/Paso-Ecuador-INEF/">
+    <meta property="og:title" content="Paso de Ecuador 25/26 - INEF">
+    <meta property="og:description"
+        content="¡No te pierdas nada! Próximos eventos, inscripciones y el ranking de la Liga Multisport.">
+    <meta property="og:image" content="https://braisrd.github.io/Paso-Ecuador-INEF/liga-multisport/logo.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://braisrd.github.io/Paso-Ecuador-INEF/">
+    <meta property="twitter:title" content="Paso de Ecuador 25/26 - INEF">
+    <meta property="twitter:description"
+        content="¡No te pierdas nada! Próximos eventos, inscripciones y el ranking de la Liga Multisport.">
+    <meta property="twitter:image" content="https://braisrd.github.io/Paso-Ecuador-INEF/liga-multisport/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { dark: '#0a0a0f', card: '#13131f', celestial: '#38bdf8', celestialDark: '#0284c7', ligaPrimary: '#6366f1', ligaSecondary: '#ec4899', }, fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Outfit', 'sans-serif'], }, animation: { 'float': 'float 6s ease-in-out infinite', 'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite', 'fade-in-up': 'fadeInUp 0.8s ease-out forwards', }, keyframes: { float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' }, }, fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' }, } } } } }
@@ -22,8 +43,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
         const firebaseConfig = { apiKey: "AIzaSyCmuNrhWE8Aw24_qUK23Qo4u_W5M6cAFN4", authDomain: "liga-multisport.firebaseapp.com", projectId: "liga-multisport", storageBucket: "liga-multisport.firebasestorage.app", messagingSenderId: "983340811794", appId: "1:983340811794:web:a86d9e3dbb620accebbacb", measurementId: "G-TPNXY1LNX9" };
-        const app = initializeApp(firebaseConfig); window.db = getFirestore(app); window.collection = collection; window.addDoc = addDoc; window.updateDoc = updateDoc; window.deleteDoc = deleteDoc; window.doc = doc; window.getDoc = getDoc; window.setDoc = setDoc; window.onSnapshot = onSnapshot; window.query = query; window.orderBy = orderBy; window.limit = limit; window.where = where;
+        const app = initializeApp(firebaseConfig); window.db = getFirestore(app); window.messaging = getMessaging(app); window.getToken = getToken; window.onMessage = onMessage; window.collection = collection; window.addDoc = addDoc; window.updateDoc = updateDoc; window.deleteDoc = deleteDoc; window.doc = doc; window.getDoc = getDoc; window.setDoc = setDoc; window.onSnapshot = onSnapshot; window.query = query; window.orderBy = orderBy; window.limit = limit; window.where = where;
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -115,6 +137,7 @@
         const Upload = (p) => <Icon {...p} d={<Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></Fragment>} />;
         const Plus = (p) => <Icon {...p} d={<Fragment><path d="M5 12h14" /><path d="M12 5v14" /></Fragment>} />;
         const X = (p) => <Icon {...p} d={<Fragment><path d="M18 6 6 18" /><path d="m6 6 12 12" /></Fragment>} />;
+        const Bell = (p) => <Icon {...p} d={<Fragment><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Fragment>} />;
 
         const compressImage = async (file) => { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = (event) => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; const MAX_WIDTH = 1200; const MAX_HEIGHT = 1200; if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }; reader.onerror = error => reject(error); }); };
 
@@ -573,6 +596,63 @@
             );
         };
 
+
+
+        const NotificationButton = () => {
+            const [permission, setPermission] = useState(Notification.permission);
+            const [loading, setLoading] = useState(false);
+
+            const requestPermission = async () => {
+                if (loading) return;
+                setLoading(true);
+                try {
+                    const perm = await Notification.requestPermission();
+                    setPermission(perm);
+                    if (perm === 'granted') {
+                        // Get token
+                        // REPLACE 'YOUR_VAPID_KEY_HERE' WITH YOUR ACTUAL KEY FROM FIREBASE CONSOLE
+                        const token = await window.getToken(window.messaging, { vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M' });
+                        if (token) {
+                            console.log('FCM Token:', token);
+                            alert('Notificaciones activadas. Token visible en consola (F12).');
+                        } else {
+                            console.log('No registration token available.');
+                        }
+                    } else {
+                        alert('Permiso denegado.');
+                    }
+                } catch (err) {
+                    console.error('Error requesting permission', err);
+                    alert('Error al activar notificaciones');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                if (permission === 'granted') {
+                    const unsubscribe = window.onMessage(window.messaging, (payload) => {
+                        console.log('Message received. ', payload);
+                        const title = payload.notification?.title || 'Nuevo Mensaje';
+                        const body = payload.notification?.body || '';
+                        // Simple custom toast
+                        const toast = document.createElement('div');
+                        toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-[#13131f] border border-celestial text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-fade-in-up flex items-center gap-4';
+                        toast.innerHTML = `<div class="text-2xl">🔔</div><div><div class="font-bold">${title}</div><div class="text-sm text-gray-400">${body}</div></div>`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 5000);
+                    });
+                    return () => unsubscribe && unsubscribe(); // onMessage returns unsubscribe function
+                }
+            }, [permission]);
+
+            return (
+                <button onClick={requestPermission} className={`p-3 rounded-full shadow-lg transition-colors ${permission === 'granted' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 text-gray-400 hover:text-white'}`}>
+                    <Bell className="w-5 h-5" />
+                </button>
+            );
+        };
+
         function App() {
             const [view, setView] = useState('app'); // 'app' | 'database'
             const [isAdmin, setIsAdmin] = useState(false);
@@ -637,15 +717,24 @@
                     {showAdminPanel && <div className="fixed top-0 left-0 hidden"></div> /* Hack to access stats inside dashboard context if needed, but we pass setStatsEvent via props currently? No, we need to modify AdminDashboard to accept onOpenStats */}
 
                     <div className="fixed top-4 right-4 z-50 flex gap-2">
+                        <NotificationButton />
                         {isAdmin && <button onClick={() => setShowAdminPanel(true)} className="p-3 bg-celestial text-black rounded-full shadow-lg hover:bg-celestialDark transition-colors"><Settings className="w-5 h-5" /></button>}
                         <button onClick={() => isAdmin ? setIsAdmin(false) : setShowLogin(true)} className={`p-3 rounded-full shadow-lg transition-colors ${isAdmin ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400 hover:text-white'}`}><Lock className="w-5 h-5" /></button>
                     </div>
 
                     {showInstall && (
-                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in-up">
-                            <button onClick={install} className="bg-white text-black px-6 py-3 rounded-full font-bold shadow-2xl flex items-center gap-2 hover:scale-105 transition-transform">
-                                <span className="text-xl">📲</span> Instalar App
-                            </button>
+                        <div className="fixed bottom-0 left-0 right-0 p-4 z-50 animate-fade-in-up flex justify-center">
+                            <div className="bg-[#13131f] border border-white/10 p-4 rounded-2xl shadow-2xl max-w-md w-full flex items-center gap-4 relative">
+                                <button onClick={() => setShowInstall(false)} className="absolute top-2 right-2 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+                                <div className="w-12 h-12 bg-celestial/20 rounded-xl flex items-center justify-center text-2xl">📲</div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-white">Instalar App</h4>
+                                    <p className="text-xs text-gray-400">Añade a inicio para acceso rápido y sin conexión.</p>
+                                </div>
+                                <button onClick={install} className="bg-celestial text-black px-4 py-2 rounded-lg font-bold text-sm hover:scale-105 transition-transform">
+                                    Instalar
+                                </button>
+                            </div>
                         </div>
                     )}
 

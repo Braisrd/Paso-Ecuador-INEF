@@ -1,9 +1,12 @@
-const CACHE_NAME = 'paso-ecuador-v2';
+const CACHE_NAME = 'paso-ecuador-v3';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './logo.png',
-    './manifest.json'
+    './manifest.json',
+    './robots.txt',
+    './sitemap.xml'
+    // Firebase scripts are cached by browser usually, avoiding caching them explicitly to prevent version conflicts
 ];
 
 self.addEventListener('install', (event) => {
@@ -13,17 +16,24 @@ self.addEventListener('install', (event) => {
             return cache.addAll(ASSETS_TO_CACHE);
         })
     );
+    self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
+    // Navigate requests -> Network first, then fallback to cache (to ensure updates are seen)
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => {
+                return caches.match(event.request);
+            })
+        );
+        return;
+    }
+
+    // Other requests -> Cache first, then network
     event.respondWith(
         caches.match(event.request).then((response) => {
-            // Return cached response if found
-            if (response) {
-                return response;
-            }
-            // Otherwise fetch from network
-            return fetch(event.request);
+            return response || fetch(event.request);
         })
     );
 });
@@ -41,4 +51,5 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
+    self.clients.claim();
 });
