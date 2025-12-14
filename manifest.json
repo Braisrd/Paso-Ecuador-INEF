@@ -5,7 +5,7 @@
     "start_url": "./index.html",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": "#0a0a0f",
+    "background_color": "#38bdf8",
     "theme_color": "#0a0a0f",
     "categories": [
         "events",
