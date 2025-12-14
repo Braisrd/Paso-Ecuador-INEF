@@ -399,7 +399,11 @@
                                         }} className="shrink-0 bg-white/10 px-3 py-2 rounded hover:bg-white/20"><span className="text-xl">📋</span></button>
                                         <button onClick={async () => {
                                             try {
-                                                const token = await window.getToken(window.messaging, { vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M' });
+                                                const registration = await navigator.serviceWorker.ready;
+                                                const token = await window.getToken(window.messaging, {
+                                                    vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M',
+                                                    serviceWorkerRegistration: registration
+                                                });
                                                 if (token) document.getElementById('fcmTokenInput').value = token;
                                             } catch (e) { alert('Suscripción no activa: ' + e.message); }
                                         }} className="shrink-0 bg-celestial text-black px-3 py-2 rounded font-bold text-xs">Obtener</button>
