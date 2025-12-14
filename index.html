@@ -124,6 +124,27 @@
             content.innerHTML = `Error: ${msg}\nEn: ${url}:${line}:${col}\nStack: ${error?.stack}`;
             return false;
         };
+
+        // Auto-Subscribe Function used by UI
+        window.autoSubscribe = async () => {
+            try {
+                if (localStorage.getItem('fcm_permission_asked')) return; // Don't ask again if already interacted (or modify logic to retry)
+
+                console.log('Attempting Auto-Subscribe...');
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
+                    const token = await window.getToken(window.messaging, {
+                        vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M',
+                        serviceWorkerRegistration: registration
+                    });
+                    console.log('Auto-Subscribe Token:', token);
+                    localStorage.setItem('fcm_permission_asked', 'true');
+                }
+            } catch (e) {
+                console.log('Auto-Subscribe silent fail:', e);
+            }
+        };
     </script>
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef, Fragment } = React;
@@ -389,39 +410,33 @@
                                     </a>
                                 </div>
 
-                                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                                    <h4 className="font-bold text-gray-400 mb-2 text-sm">Tu Token de Dispositivo (Para Pruebas)</h4>
-                                    <div className="flex gap-2">
-                                        <input id="fcmTokenInput" readOnly className="w-full bg-black/40 text-gray-500 text-xs p-2 rounded border border-white/5" placeholder="Esperando permiso..." />
-                                        <button onClick={async () => {
-                                            const t = document.getElementById('fcmTokenInput').value;
-                                            if (t) { await navigator.clipboard.writeText(t); alert('Token copiado!'); }
-                                        }} className="shrink-0 bg-white/10 px-3 py-2 rounded hover:bg-white/20"><span className="text-xl">📋</span></button>
-                                        <button onClick={async () => {
-                                            try {
-                                                alert('Configurando notificaciones... (Acepta permisos si se pide)');
-                                                const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
-                                                console.log('SW Registrado:', registration);
-
-                                                const token = await window.getToken(window.messaging, {
-                                                    vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M',
-                                                    serviceWorkerRegistration: registration
-                                                });
-
-                                                if (token) {
-                                                    document.getElementById('fcmTokenInput').value = token;
-                                                    alert('¡Token Generado! La configuración es correcta.');
-                                                }
-                                            } catch (e) {
-                                                console.error(e);
-                                                alert('Error: ' + e.message + '\n(Mira la consola para más detalles)');
-                                            }
-                                        }} className="shrink-0 bg-celestial text-black px-3 py-2 rounded font-bold text-xs">Obtener</button>
-                                    </div>
-                                    <p className="text-[10px] text-gray-500 mt-2">Usa este token en el apartado "Enviar mensaje de prueba" de Firebase.</p>
-                                </div>
-
                                 <div className="border-t border-white/10 pt-6">
+                                    <details className="mb-6 cursor-pointer group">
+                                        <summary className="text-xs text-gray-500 hover:text-celestial transition-colors mb-2 select-none">🔧 Herramientas Avanzadas (Debug Token)</summary>
+                                        <div className="bg-white/5 p-4 rounded-xl border border-white/10 mt-2">
+                                            <h4 className="font-bold text-gray-400 mb-2 text-sm">Tu Token de Dispositivo</h4>
+                                            <div className="flex gap-2">
+                                                <input id="fcmTokenInput" readOnly className="w-full bg-black/40 text-gray-500 text-xs p-2 rounded border border-white/5" placeholder="Esperando auto-suscripción..." />
+                                                <button onClick={async () => {
+                                                    const t = document.getElementById('fcmTokenInput').value;
+                                                    if (t) { await navigator.clipboard.writeText(t); alert('Token copiado!'); }
+                                                }} className="shrink-0 bg-white/10 px-3 py-2 rounded hover:bg-white/20"><span className="text-xl">📋</span></button>
+                                                <button onClick={async () => {
+                                                    try {
+                                                        alert('Forzando configuración...');
+                                                        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
+                                                        console.log('SW Registrado:', registration);
+                                                        const token = await window.getToken(window.messaging, {
+                                                            vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M',
+                                                            serviceWorkerRegistration: registration
+                                                        });
+                                                        if (token) document.getElementById('fcmTokenInput').value = token;
+                                                    } catch (e) { alert('Error: ' + e.message); }
+                                                }} className="shrink-0 bg-celestial text-black px-3 py-2 rounded font-bold text-xs">Forzar</button>
+                                            </div>
+                                        </div>
+                                    </details>
+
                                     <h3 className="font-bold text-gray-400 mb-4">Historial de Notificaciones (Últimas 20)</h3>
                                     <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                                         {(announcements || []).map(a => (
@@ -896,7 +911,7 @@
                         <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 animate-float"><img src="./liga-multisport/logo.png" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(56,189,248,0.3)]" /></div>
                         <h1 className="text-5xl md:text-8xl font-black text-center tracking-tighter mb-4"><span className="text-white">PASO DE </span><span className="text-celestial text-glow">ECUADOR</span></h1>
                         <p className="text-xl md:text-2xl text-gray-400 font-light tracking-wide mb-12">INEF 25/26</p>
-                        <a href="#events" className="px-8 py-3 rounded-full bg-celestial text-black font-bold text-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all">Próximos Eventos</a>
+                        <a href="#events" onClick={() => window.autoSubscribe()} className="px-8 py-3 rounded-full bg-celestial text-black font-bold text-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all">Próximos Eventos</a>
                     </section>
 
                     {specialSections.filter(s => {
