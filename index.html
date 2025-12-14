@@ -903,7 +903,7 @@
                     {showAdminPanel && <div className="fixed top-0 left-0 hidden"></div> /* Hack to access stats inside dashboard context if needed, but we pass setStatsEvent via props currently? No, we need to modify AdminDashboard to accept onOpenStats */}
 
                     <div className="fixed top-4 right-4 z-50 flex gap-2">
-                        {isStandalone && <button onClick={() => window.subscribeUser()} className="flex items-center gap-2 px-3 py-2 bg-white/5 text-celestial rounded-full shadow-lg hover:bg-white/10 transition-colors border border-celestial/30 text-xs font-bold uppercase"><span className="text-lg">📡</span> Activar Avisos</button>}
+                        <button onClick={() => window.subscribeUser()} className="flex items-center gap-2 px-3 py-2 bg-white/5 text-celestial rounded-full shadow-lg hover:bg-white/10 transition-colors border border-celestial/30 text-xs font-bold uppercase"><span className="text-lg">📡</span> Activar Avisos</button>
                         <NotificationButton onClick={toggleInbox} hasUnread={hasUnread} />
                         {isAdmin && <button onClick={() => setShowAdminPanel(true)} className="p-3 bg-celestial text-black rounded-full shadow-lg hover:bg-celestialDark transition-colors"><Settings className="w-5 h-5" /></button>}
                         <button onClick={() => isAdmin ? setIsAdmin(false) : setShowLogin(true)} className={`p-3 rounded-full shadow-lg transition-colors ${isAdmin ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400 hover:text-white'}`}><Lock className="w-5 h-5" /></button>
