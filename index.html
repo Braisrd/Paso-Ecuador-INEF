@@ -49,17 +49,21 @@
 
         // Service Worker registration moved to end of body to use firebase-messaging-sw.js
         if ('serviceWorker' in navigator) {
-            // Old registration removed
+            // FORCE UNREGISTER OLD SW
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
+                    if (registration.active && registration.active.scriptURL.includes('service-worker.js')) {
+                        console.log('Unregistering old SW:', registration);
+                        registration.unregister();
+                    }
+                }
+            });
         }
 
         // Handle foreground messages
         onMessage(messaging, (payload) => {
-            console.log('Message received. ', payload);
-            const { title, body } = payload.notification;
-            // Don't show system notification if app is open to avoid duplicates/confusion.
-            // Ideally, show a custom UI "Toast" here. For now, just alert or console.
-            // confirm(title + '\n' + body); // Too intrusive?
-            // Let's rely on the user seeing the update in the UI if possible.
+            console.log('Message received (Foreground): ', payload);
+            // NO SYSTEM NOTIFICATION HERE - Solves Duplicate Issue
         });
     </script>
     <link
