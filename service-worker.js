@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paso-ecuador-v3';
+const CACHE_NAME = 'paso-ecuador-v4';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
