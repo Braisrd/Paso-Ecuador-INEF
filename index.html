@@ -51,6 +51,13 @@
         if ('serviceWorker' in navigator) {
             // Old registration removed
         }
+
+        // Handle foreground messages
+        onMessage(messaging, (payload) => {
+            console.log('Message received. ', payload);
+            const { title, body, icon } = payload.notification;
+            new Notification(title, { body, icon: './logo.png' });
+        });
     </script>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@300;500;700;900&display=swap"
