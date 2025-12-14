@@ -990,6 +990,19 @@
             </ErrorBoundary>
         );
     </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./firebase-messaging-sw.js')
+                    .then(registration => {
+                        console.log('SW Registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW Registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
 </body>
 
 </html>
