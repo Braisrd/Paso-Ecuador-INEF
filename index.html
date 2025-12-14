@@ -399,13 +399,23 @@
                                         }} className="shrink-0 bg-white/10 px-3 py-2 rounded hover:bg-white/20"><span className="text-xl">📋</span></button>
                                         <button onClick={async () => {
                                             try {
-                                                const registration = await navigator.serviceWorker.ready;
+                                                alert('Configurando notificaciones... (Acepta permisos si se pide)');
+                                                const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
+                                                console.log('SW Registrado:', registration);
+
                                                 const token = await window.getToken(window.messaging, {
                                                     vapidKey: 'BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M',
                                                     serviceWorkerRegistration: registration
                                                 });
-                                                if (token) document.getElementById('fcmTokenInput').value = token;
-                                            } catch (e) { alert('Suscripción no activa: ' + e.message); }
+
+                                                if (token) {
+                                                    document.getElementById('fcmTokenInput').value = token;
+                                                    alert('¡Token Generado! La configuración es correcta.');
+                                                }
+                                            } catch (e) {
+                                                console.error(e);
+                                                alert('Error: ' + e.message + '\n(Mira la consola para más detalles)');
+                                            }
                                         }} className="shrink-0 bg-celestial text-black px-3 py-2 rounded font-bold text-xs">Obtener</button>
                                     </div>
                                     <p className="text-[10px] text-gray-500 mt-2">Usa este token en el apartado "Enviar mensaje de prueba" de Firebase.</p>
