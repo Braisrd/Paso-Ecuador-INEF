@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paso de Ecuador 25/26 - INEF</title>
+
+    <!-- Tailwind CSS v3 (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0f',
+                        card: '#13131f',
+                        celestial: '#38bdf8', // Sky 400
+                        celestialDark: '#0284c7', // Sky 600
+                        ligaPrimary: '#6366f1', // Indigo 500
+                        ligaSecondary: '#ec4899', // Pink 500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmuNrhWE8Aw24_qUK23Qo4u_W5M6cAFN4",
+            authDomain: "liga-multisport.firebaseapp.com",
+            projectId: "liga-multisport",
+            storageBucket: "liga-multisport.firebasestorage.app",
+            messagingSenderId: "983340811794",
+            appId: "1:983340811794:web:a86d9e3dbb620accebbacb",
+            measurementId: "G-TPNXY1LNX9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.onSnapshot = onSnapshot;
+        window.query = query;
+        window.orderBy = orderBy;
+    </script>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@300;500;700;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #0a0a0f;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Celestial Background */
+        .bg-celestial {
+            background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 10% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+        }
+
+        .glass-panel {
+            background: rgba(19, 19, 31, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Diagonal Divider */
+        .clip-diagonal {
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+        }
+
+        .clip-diagonal-reverse {
+            clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 100%);
+            margin-top: -10vw;
+            padding-top: 10vw;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="bg-celestial">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONS ---
+        const Icon = ({ d, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{d}</svg>
+        );
+        const CalendarIcon = (p) => <Icon {...p} d={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></>} />
+        const MapPin = (p) => <Icon {...p} d={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>} />
+        const Plus = (p) => <Icon {...p} d={<><path d="M5 12h14" /><path d="M12 5v14" /></>} />
+        const Lock = (p) => <Icon {...p} d={<><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>} />
+        const Trash = (p) => <Icon {...p} d={<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></>} />
+        const ExternalLink = (p) => <Icon {...p} d={<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" x2="21" y1="14" y2="3" /></>} />
+        const Checks = (p) => <Icon {...p} d={<><path d="M18 6 7 17l-5-5" /><path d="m22 10-7.5 7.5L13 16" /></>} />
+        const Ticket = (p) => <Icon {...p} d={<><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /></>} />
+        const Party = (p) => <Icon {...p} d={<><path d="m8 3 4 8 5-5 5 15H2L8 3z" /></>} />
+
+        // --- COMPONENTS ---
+
+        const AdminLogin = ({ onClose, onSuccess }) => {
+            const [pass, setPass] = useState('');
+            const storedPass = localStorage.getItem('liga_password') || '4321'; // Default backup
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (pass === storedPass) {
+                    onSuccess();
+                } else {
+                    alert('Contraseña incorrecta');
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-[#13131f] border border-white/10 p-8 rounded-2xl w-full max-w-sm text-center">
+                        <h2 className="text-2xl font-bold mb-4">Admin Access</h2>
+                        <form onSubmit={handleLogin}>
+                            <input
+                                type="password"
+                                autoFocus
+                                className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-center text-white text-xl tracking-widest mb-4 focus:border-celestial outline-none"
+                                value={pass}
+                                onChange={e => setPass(e.target.value)}
+                            />
+                            <div className="flex gap-2 justify-center">
+                                <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white">Cancelar</button>
+                                <button type="submit" className="px-6 py-2 bg-celestial text-black font-bold rounded-lg hover:bg-celestialDark transition-colors">Entrar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+
+        function App() {
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [showLogin, setShowLogin] = useState(false);
+            const [events, setEvents] = useState([]);
+
+            // --- FIREBASE SYNC ---
+            useEffect(() => {
+                if (!window.db) return;
+                const q = window.query(window.collection(window.db, "events"), window.orderBy("date", "asc"));
+                const unsubscribe = window.onSnapshot(q, (snapshot) => {
+                    const loaded = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setEvents(loaded.filter(e => new Date(e.date) >= new Date(new Date().setHours(0, 0, 0, 0)))); // Only future/today
+                });
+                return () => unsubscribe();
+            }, []);
+
+            const handleAddEvent = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const newEvent = {
+                    title: formData.get('title'),
+                    date: formData.get('date'),
+                    location: formData.get('location'),
+                    type: formData.get('type'), // party, trip, tournament
+                    actionType: formData.get('actionType'), // none, link, survey, ticket
+                    actionLabel: formData.get('actionLabel'),
+                    actionLink: formData.get('actionLink'),
+                    surveyCount: 0
+                };
+
+                try {
+                    await window.addDoc(window.collection(window.db, "events"), newEvent);
+                    alert('Evento añadido');
+                    e.target.reset();
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            };
+
+            const handleDeleteEvent = async (id) => {
+                if (confirm('¿Borrar evento?')) {
+                    await window.deleteDoc(window.doc(window.db, "events", id));
+                }
+            };
+
+            const handleSurvey = async (event) => {
+                const key = `voted_${event.id}`;
+                if (localStorage.getItem(key)) return alert('Ya has confirmado asistencia');
+
+                try {
+                    const ref = window.doc(window.db, "events", event.id);
+                    // Standard increment is safer with atomic ops but simplifying for prototype
+                    await window.updateDoc(ref, {
+                        surveyCount: (event.surveyCount || 0) + 1
+                    });
+                    localStorage.setItem(key, 'true');
+                    alert('¡Asistencia confirmada!');
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            // --- RENDER HELPERS ---
+
+            const renderAction = (evt) => {
+                const btnBase = "mt-4 w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-95";
+
+                if (evt.actionType === 'link' || evt.actionType === 'ticket') {
+                    return (
+                        <a href={evt.actionLink} target="_blank" className={`${btnBase} bg-white/5 hover:bg-white/10 border border-white/10 text-white`}>
+                            {evt.actionType === 'ticket' ? <Ticket className="w-5 h-5" /> : <ExternalLink className="w-5 h-5" />}
+                            {evt.actionLabel || 'Más Información'}
+                        </a>
+                    );
+                }
+                if (evt.actionType === 'survey') {
+                    const voted = localStorage.getItem(`voted_${evt.id}`);
+                    return (
+                        <button
+                            onClick={() => handleSurvey(evt)}
+                            disabled={!!voted}
+                            className={`${btnBase} ${voted ? 'bg-green-500/20 text-green-400 cursor-default' : 'bg-celestial text-black hover:bg-celestialDark'}`}
+                        >
+                            <Checks className="w-5 h-5" />
+                            {voted ? 'Asistencia Confirmada' : (evt.actionLabel || 'Asistiré')}
+                            <span className="ml-2 bg-black/20 px-2 py-0.5 rounded text-xs">{(evt.surveyCount || 0)}</span>
+                        </button>
+                    );
+                }
+                return null;
+            };
+
+            // --- CALENDAR LOGIC ---
+            const monthDays = useMemo(() => {
+                const d = new Date();
+                const month = d.getMonth();
+                const year = d.getFullYear();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+
+                // Adjust for spanish Monday start (0=Mon, 6=Sun)
+                const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+                const days = Array(startOffset).fill(null);
+                for (let i = 1; i <= daysInMonth; i++) days.push(i);
+                return { days, monthName: d.toLocaleString('es-ES', { month: 'long' }).toUpperCase() };
+            }, []);
+
+            return (
+                <div className="min-h-screen flex flex-col relative">
+
+                    {/* --- ADMIN ACCESS BTN --- */}
+                    <button onClick={() => setShowLogin(true)} className="fixed top-4 right-4 z-50 p-2 text-white/20 hover:text-celestial transition-colors">
+                        <Lock className="w-5 h-5" />
+                    </button>
+
+                    {showLogin && <AdminLogin onClose={() => setShowLogin(false)} onSuccess={() => { setIsAdmin(true); setShowLogin(false); }} />}
+
+                    {/* --- HERO SECTION --- */}
+                    <section className="min-h-[90vh] flex flex-col items-center justify-center p-6 relative clip-diagonal bg-[#0a0a0f]">
+                        <div className="absolute inset-0 bg-celestial/10 blur-[100px] pointer-events-none"></div>
+
+                        {/* Logo */}
+                        <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 animate-float">
+                            <img src="./liga-multisport/logo.png" alt="Logo Paso Ecuador" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(56,189,248,0.3)]" />
+                        </div>
+
+                        <h1 className="text-5xl md:text-8xl font-black text-center tracking-tighter mb-4">
+                            <span className="text-white">PASO DE </span>
+                            <span className="text-celestial text-glow">ECUADOR</span>
+                        </h1>
+                        <p className="text-xl md:text-2xl text-gray-400 font-light tracking-wide mb-12">INEF 25/26</p>
+
+                        <div className="flex gap-4 animate-fade-in-up">
+                            <a href="#events" className="px-8 py-3 rounded-full bg-celestial text-black font-bold text-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all">
+                                Próximos Eventos
+                            </a>
+                        </div>
+                    </section>
+
+
+                    {/* --- UPCOMING EVENTS --- */}
+                    <section id="events" className="py-20 px-4 md:px-8 max-w-7xl mx-auto w-full -mt-20 relative z-10">
+                        <h2 className="text-4xl font-bold mb-12 flex items-center gap-4">
+                            <span className="w-2 h-12 bg-celestial rounded-full"></span>
+                            Próximamente
+                        </h2>
+
+                        {/* Admin Add Form */}
+                        {isAdmin && (
+                            <div className="mb-12 glass-panel p-6 rounded-2xl border-l-4 border-celestial">
+                                <h3 className="font-bold text-xl mb-4">Añadir Evento</h3>
+                                <form onSubmit={handleAddEvent} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input name="title" placeholder="Título del evento" required className="bg-black/40 p-3 rounded border border-white/10 text-white" />
+                                    <input name="date" type="date" required className="bg-black/40 p-3 rounded border border-white/10 text-white" />
+                                    <input name="location" placeholder="Ubicación" className="bg-black/40 p-3 rounded border border-white/10 text-white" />
+
+                                    <select name="type" className="bg-black/40 p-3 rounded border border-white/10 text-white">
+                                        <option value="party">Fiesta</option>
+                                        <option value="trip">Viaje</option>
+                                        <option value="event">Evento</option>
+                                    </select>
+
+                                    <select name="actionType" className="bg-black/40 p-3 rounded border border-white/10 text-white">
+                                        <option value="none">Sin botón</option>
+                                        <option value="survey">Encuesta (Asistiré)</option>
+                                        <option value="link">Enlace Externo</option>
+                                        <option value="ticket">Reserva / Entradas</option>
+                                    </select>
+
+                                    <input name="actionLabel" placeholder="Texto del botón (Ej: Reservar)" className="bg-black/40 p-3 rounded border border-white/10 text-white" />
+                                    <input name="actionLink" placeholder="Enlace (Si aplica)" className="bg-black/40 p-3 rounded border border-white/10 text-white md:col-span-2" />
+
+                                    <button className="md:col-span-2 bg-white/10 hover:bg-white/20 py-3 rounded font-bold">Crear Evento</button>
+                                </form>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {events.map(evt => (
+                                <div key={evt.id} className="glass-panel p-6 rounded-3xl hover:bg-[#1c1c2e] transition-all group relative overflow-hidden">
+                                    {isAdmin && <button onClick={() => handleDeleteEvent(evt.id)} className="absolute top-4 right-4 text-red-500 hover:bg-black/50 p-2 rounded-full z-20"><Trash className="w-4 h-4" /></button>}
+
+                                    <div className="text-celestial font-bold tracking-wider text-sm mb-2 uppercase">{new Date(evt.date).toLocaleDateString()}</div>
+                                    <h3 className="text-2xl font-bold text-white mb-2 leading-tight">{evt.title}</h3>
+                                    {evt.location && (
+                                        <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
+                                            <MapPin className="w-4 h-4" /> {evt.location}
+                                        </div>
+                                    )}
+
+                                    {/* Action Area */}
+                                    <div className="mt-auto">
+                                        {renderAction(evt)}
+                                    </div>
+
+                                    {/* Decorative Icon BG */}
+                                    <div className="absolute -bottom-4 -right-4 text-white/5 transform rotate-[-15deg]">
+                                        {evt.type === 'party' ? <Party className="w-32 h-32" /> : evt.type === 'ticket' ? <Ticket className="w-32 h-32" /> : <CalendarIcon className="w-32 h-32" />}
+                                    </div>
+                                </div>
+                            ))}
+                            {events.length === 0 && (
+                                <div className="col-span-full py-20 text-center text-gray-500 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                    No hay eventos próximos programados
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
+
+                    {/* --- LIGA SECTION --- */}
+                    <div className="relative py-32 bg-[#050507]">
+                        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0a0a0f] to-[#050507]"></div>
+
+                        <section className="relative z-10 max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+                            <div>
+                                <h2 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter">
+                                    <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">LIGA</span>
+                                    <br />
+                                    <span className="bg-gradient-to-r from-ligaPrimary to-ligaSecondary bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">MULTISPORT</span>
+                                </h2>
+                                <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-md">
+                                    Compite en torneos, acumula puntos y lidera el ranking anual.
+                                    ¿Tienes lo necesario para llevarte el premio final?
+                                </p>
+                                <a href="./liga-multisport/index.html" className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-ligaPrimary to-ligaSecondary text-white font-black text-xl hover:scale-105 transition-transform shadow-[0_0_30px_rgba(236,72,153,0.4)]">
+                                    VER CLASIFICACIÓN <ExternalLink className="w-6 h-6" />
+                                </a>
+                            </div>
+
+                            {/* Visual Preview */}
+                            <div className="relative group perspective-distant">
+                                <div className="absolute inset-0 bg-gradient-to-r from-ligaPrimary to-ligaSecondary blur-[60px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                                <div className="glass-panel p-6 rounded-3xl border-t border-white/10 transform rotate-[-3deg] group-hover:rotate-0 transition-all duration-500 md:translate-x-12">
+                                    <div className="flex items-center gap-4 mb-4 border-b border-white/10 pb-4">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-600 flex items-center justify-center font-bold text-black border-2 border-yellow-200">#1</div>
+                                        <div>
+                                            <div className="text-sm text-gray-400">Líder Actual</div>
+                                            <div className="font-bold text-xl">Tu Nombre Aquí</div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3 opacity-50">
+                                        <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                                        <div className="h-4 bg-white/20 rounded w-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0f] to-[#050507]"></div>
+                    </div>
+
+
+                    {/* --- CALENDAR MINI SECTION --- */}
+                    <section className="py-20 px-6 max-w-4xl mx-auto w-full">
+                        <h2 className="text-center text-3xl font-bold mb-12 uppercase tracking-widest text-[#38bdf8]">
+                            Calendario • {monthDays.monthName}
+                        </h2>
+
+                        <div className="glass-panel p-8 rounded-3xl">
+                            <div className="grid grid-cols-7 gap-2 md:gap-4 text-center">
+                                {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => <div key={d} className="font-bold text-gray-500 py-2">{d}</div>)}
+
+                                {monthDays.days.map((d, i) => {
+                                    if (!d) return <div key={i}></div>;
+
+                                    // Check if event exists on this day
+                                    const currentDate = new Date();
+                                    currentDate.setDate(d);
+                                    let hasEvent = events.some(e => new Date(e.date).getDate() === d && new Date(e.date).getMonth() === currentDate.getMonth());
+
+                                    return (
+                                        <div key={i} className={`aspect-square flex items-center justify-center rounded-xl text-lg font-bold relative group
+                                            ${hasEvent ? 'bg-celestial/20 text-celestial border border-celestial/30' : 'hover:bg-white/5 text-gray-300'}
+                                        `}>
+                                            {d}
+                                            {hasEvent && <div className="absolute bottom-2 w-1.5 h-1.5 bg-celestial rounded-full animate-pulse"></div>}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </section>
+
+
+                    {/* --- FOOTER --- */}
+                    <footer className="mt-auto py-12 border-t border-white/5 bg-[#050507]">
+                        <div className="flex flex-col items-center gap-8">
+                            <div className="flex gap-6">
+                                <a href="https://instagram.com" target="_blank" className="p-4 bg-white/5 rounded-full hover:bg-gradient-to-br hover:from-purple-600 hover:to-orange-500 transition-all hover:scale-110">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg>
+                                </a>
+                                <a href="https://tiktok.com" target="_blank" className="p-4 bg-white/5 rounded-full hover:bg-black hover:border hover:border-celestial hover:text-celestial transition-all hover:scale-110">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>
+                                </a>
+                            </div>
+                            <div className="text-gray-600 text-sm">
+                                © 2025 Paso de Ecuador INEF 25/26
+                            </div>
+                        </div>
+                    </footer>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liga Multisport - Paso de Ecuador 25/26</title>
+
+    <!-- Tailwind CSS v3 (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0f',
+                        card: '#13131f',
+                        cardHover: '#1c1c2e',
+                        primary: '#6366f1', // Indigo 500
+                        secondary: '#ec4899', // Pink 500
+                        accent: '#8b5cf6', // Violet 500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        body {
+            background-color: #0a0a0f;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        .glass {
+            background: rgba(19, 19, 31, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(28, 28, 46, 0.6) 0%, rgba(19, 19, 31, 0.8) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .text-glow {
+            text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        /* Rank Badges */
+        .rank-1 {
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #fdba74 0%, #c2410c 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONS (Inline SVGs) ---
+        const IconProto = ({ d, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {d}
+            </svg>
+        );
+        const X = (p) => <IconProto {...p} d={<><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>} />
+        const Search = (p) => <IconProto {...p} d={<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>} />
+        const Shield = (p) => <IconProto {...p} d={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /></>} />
+        const Ghost = (p) => <IconProto {...p} d={<><path d="M9 10h.01" /><path d="M15 10h.01" /><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z" /></>} />
+        const PlusCircle = (p) => <IconProto {...p} d={<><circle cx="12" cy="12" r="10" /><path d="M8 12h8" /><path d="M12 8v8" /></>} />
+        const Trash2 = (p) => <IconProto {...p} d={<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></>} />
+        const Info = (p) => <IconProto {...p} d={<><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></>} />
+        const ChevronDown = (p) => <IconProto {...p} d={<><path d="m6 9 6 6 6-6" /></>} />
+        const Save = (p) => <IconProto {...p} d={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>} />
+
+
+        // --- UTILS ---
+        const normalizeName = (name) => {
+            if (!name) return "";
+            return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        };
+
+        const formatDate = (dateString, includeTime = false) => {
+            if (!dateString) return '';
+            const d = new Date(dateString);
+            return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', ...(includeTime && { hour: '2-digit', minute: '2-digit' }) });
+        };
+
+        const INITIAL_DESCRIPTION = `Se trata de una liga individual en la que daremos 100€ a la persona ganadora al final del curso.
+Los puntos se obtienen participando en torneos y ganándolos, siendo los puntos obtenidos:
+
+• **+1 punto** por participar
+• **+3 puntos** por quedar segundo/a
+• **+5 puntos** por quedar primero/a`;
+
+
+        // --- COMPONENTS ---
+
+        const Modal = ({ isOpen, onClose, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="relative z-10 w-full max-w-2xl bg-[#0f0f16] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh]">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-20">
+                            <X className="w-6 h-6" />
+                        </button>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        const PlayerCard = ({ player, rank, onClick }) => {
+            // Re-calculate visual rank if filtered? No, usually pure rank from sort.
+            const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'text-gray-500';
+            const bgClass = rank === 1 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-[#1c1c2e]/50 hover:bg-[#1c1c2e] border-white/5';
+
+            return (
+                <div
+                    onClick={onClick}
+                    className={`group relative flex items-center p-4 rounded-xl border transition-all duration-300 cursor-pointer ${bgClass}`}
+                >
+                    <div className={`w-12 h-12 flex items-center justify-center text-2xl font-black mr-4 ${rankClass}`}>
+                        {rank <= 3 ? '#' + rank : rank}
+                    </div>
+
+                    <div className="flex-1">
+                        <h3 className={`font-bold text-lg ${rank === 1 ? 'text-white' : 'text-gray-200'} group-hover:text-primary transition-colors`}>
+                            {player.name}
+                        </h3>
+                        {rank === 1 && <span className="text-xs text-yellow-500 font-medium tracking-wider">LÍDER ACTUAL</span>}
+                    </div>
+
+                    <div className="text-right">
+                        <div className="text-2xl font-bold text-white tracking-tight">{player.displayPoints !== undefined ? player.displayPoints : player.points}</div>
+                        <div className="text-xs text-gray-500 font-medium">PUNTOS</div>
+                    </div>
+
+                    {/* Hover Glow */}
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 to-secondary/0 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"></div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+
+        function App() {
+            const [view, setView] = useState('public');
+            // Data
+            const [players, setPlayers] = useState(() => JSON.parse(localStorage.getItem('liga_players')) || []);
+            const [localTournaments, setLocalTournaments] = useState(() => JSON.parse(localStorage.getItem('liga_tournaments')) || []);
+            const [description, setDescription] = useState(() => localStorage.getItem('liga_description') || INITIAL_DESCRIPTION);
+            const [password, setPassword] = useState(() => localStorage.getItem('liga_password') || "4321");
+
+            // Interaction
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedPlayer, setSelectedPlayer] = useState(null);
+            const [selectedTournament, setSelectedTournament] = useState('ALL');
+            const [showInfo, setShowInfo] = useState(false);
+
+            const [adminPassInput, setAdminPassInput] = useState('');
+
+            useEffect(() => { localStorage.setItem('liga_players', JSON.stringify(players)); }, [players]);
+            useEffect(() => { localStorage.setItem('liga_tournaments', JSON.stringify(localTournaments)); }, [localTournaments]);
+            useEffect(() => { localStorage.setItem('liga_description', description); }, [description]);
+            useEffect(() => { localStorage.setItem('liga_password', password); }, [password]);
+
+
+            // --- DATA LOGIC ---
+
+            const findOrAddPlayer = (rawName, currentPlayers) => {
+                if (!rawName) return null;
+                const norm = normalizeName(rawName);
+                let player = currentPlayers.find(p => normalizeName(p.name) === norm);
+                if (!player) {
+                    player = {
+                        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                        name: rawName.trim(),
+                        points: 0,
+                        wins: [],
+                        history: []
+                    };
+                    return { player, isNew: true };
+                }
+                return { player, isNew: false };
+            };
+
+            const processTournament = (tName, tDate, rawFirst, rawSecond, rawParticipants) => {
+                let tempPlayers = [...players];
+                const timestamp = Date.now();
+
+                // Helper to extract names from textareas
+                const parse = (txt) => txt.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+                const listFirst = parse(rawFirst);
+                const listSecond = parse(rawSecond);
+                const listOthers = parse(rawParticipants);
+
+                // Logic: 
+                // A person can only get points for the highest tier they achieved in this tournament.
+                // 1st > 2nd > Participant.
+                // We'll track who has been "processed" for this tournament to avoid double dipping.
+                const processedNames = new Set();
+
+                const updatePlayer = (name, points, type) => {
+                    const norm = normalizeName(name);
+                    if (processedNames.has(norm)) return; // Already awarded higher points
+                    processedNames.add(norm);
+
+                    const res = findOrAddPlayer(name, tempPlayers);
+                    let p = res.player;
+
+                    p.points += points;
+                    p.history = p.history || [];
+                    p.history.push({ tournament: tName, points: points, date: tDate, type: type });
+
+                    if (type === '1º Puesto') {
+                        p.wins = p.wins || [];
+                        p.wins.push(new Date(tDate).getTime());
+                    }
+
+                    if (res.isNew) {
+                        tempPlayers.push(p);
+                    } else {
+                        // Update in array
+                        const idx = tempPlayers.findIndex(x => x.id === p.id);
+                        tempPlayers[idx] = p;
+                    }
+                };
+
+                // Execute in order of priority
+                listFirst.forEach(n => updatePlayer(n, 5, '1º Puesto'));
+                listSecond.forEach(n => updatePlayer(n, 3, '2º Puesto'));
+                listOthers.forEach(n => updatePlayer(n, 1, 'Participación'));
+
+                // Save Tournament Metadata for filtering
+                const newTourney = {
+                    id: timestamp.toString(),
+                    name: tName,
+                    date: tDate,
+                    winners: listFirst
+                };
+
+                setLocalTournaments(prev => [newTourney, ...prev]);
+                setPlayers(tempPlayers);
+                alert("Torneo guardado y puntos actualizados.");
+            };
+
+            const manualDelete = (id) => {
+                if (confirm("¿Seguro que quieres borrar a este jugador?")) {
+                    setPlayers(prev => prev.filter(p => p.id !== id));
+                }
+            };
+
+            const manualUpdatePoints = (id, delta) => {
+                setPlayers(prev => prev.map(p =>
+                    p.id === id ? { ...p, points: Math.max(0, p.points + delta) } : p
+                ));
+            };
+
+            // --- COMPUTED VIEW ---
+
+            const sortedPlayers = useMemo(() => {
+                let list = [...players];
+
+                // Global Filter by Name
+                if (searchTerm) {
+                    list = list.filter(p => normalizeName(p.name).includes(normalizeName(searchTerm)));
+                }
+
+                // Filter by Tournament (if selected)
+                // Filter by Tournament (if selected)
+                if (selectedTournament !== 'ALL') {
+                    const tourneyObj = localTournaments.find(t => t.id === selectedTournament);
+                    if (tourneyObj) {
+                        // Filter participants and calculate specific points
+                        list = list.map(p => {
+                            // Calculate points ONLY for this tournament
+                            const tourneyPoints = p.history
+                                ? p.history.filter(h => h.tournament === tourneyObj.name)
+                                    .reduce((sum, h) => sum + h.points, 0)
+                                : 0;
+
+                            return { ...p, displayPoints: tourneyPoints };
+                        }).filter(p => p.displayPoints > 0); // Only show players who gained points
+                    }
+                } else {
+                    // Reset display points to normal points for Global View
+                    list = list.map(p => ({ ...p, displayPoints: p.points }));
+                }
+
+                return list.sort((a, b) => {
+                    // Sort by displayPoints (which is either global points or tournament points)
+                    const pointsA = a.displayPoints !== undefined ? a.displayPoints : a.points;
+                    const pointsB = b.displayPoints !== undefined ? b.displayPoints : b.points;
+
+                    if (pointsB !== pointsA) return pointsB - pointsA;
+
+                    // Tie-breaker: Recent Win (Global)
+                    const lastWinA = a.wins && a.wins.length > 0 ? Math.max(...a.wins) : 0;
+                    const lastWinB = b.wins && b.wins.length > 0 ? Math.max(...b.wins) : 0;
+                    return lastWinB - lastWinA;
+                });
+            }, [players, searchTerm, selectedTournament, localTournaments]);
+
+            const topPlayer = sortedPlayers.length > 0 ? sortedPlayers[0] : null;
+
+            // --- RENDER ---
+
+            if (view === 'public') {
+                return (
+                    <div className="min-h-screen">
+                        {/* HERO SECTION */}
+                        <div className="relative py-12 px-4 overflow-hidden">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/20 blur-[100px] rounded-full pointer-events-none"></div>
+
+                            {/* Info Button Top Right */}
+                            <div className="absolute top-6 right-6 z-20 flex gap-2">
+                                <button onClick={() => setShowInfo(true)} className="p-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-colors group">
+                                    <Info className="w-5 h-5 text-gray-400 group-hover:text-white" />
+                                </button>
+                            </div>
+
+                            <div className="max-w-4xl mx-auto text-center relative z-10">
+                                <h1 className="text-6xl md:text-7xl font-black mb-2 tracking-tighter">
+                                    <span className="bg-gradient-to-r from-white via-blue-100 to-gray-400 bg-clip-text text-transparent">LIGA</span>
+                                    <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-glow ml-4">MULTISPORT</span>
+                                </h1>
+                                <p className="text-blue-200/60 uppercase tracking-[0.3em] font-bold text-sm mb-12">Paso de Ecuador 25/26</p>
+
+                                {/* Stats Overview */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
+                                    <div className="glass p-4 rounded-2xl">
+                                        <div className="text-xs text-gray-500 uppercase font-bold text-center">{selectedTournament === 'ALL' ? 'Líder Actual' : 'Ganador Torneo'}</div>
+                                        <div className="text-xl font-bold bg-gradient-to-r from-yellow-200 to-yellow-600 bg-clip-text text-transparent text-center truncate">
+                                            {topPlayer ? topPlayer.name : '-'}
+                                        </div>
+                                    </div>
+                                    <div className="glass p-4 rounded-2xl">
+                                        <div className="text-xs text-gray-500 uppercase font-bold text-center">Jugadores</div>
+                                        <div className="text-2xl font-bold text-white text-center">{players.length}</div>
+                                    </div>
+                                    <div className="glass p-4 rounded-2xl hidden md:block">
+                                        <div className="text-xs text-gray-500 uppercase font-bold text-center">Torneos</div>
+                                        <div className="text-2xl font-bold text-white text-center">{localTournaments.length}</div>
+                                    </div>
+                                </div>
+
+                                {/* Controls Row */}
+                                <div className="max-w-2xl mx-auto flex flex-col md:flex-row gap-4 mb-8">
+                                    {/* Search */}
+                                    <div className="relative flex-1 group">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Search className="text-gray-500 w-5 h-5 group-focus-within:text-primary transition-colors" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar jugador..."
+                                            className="w-full bg-[#13131f] border border-white/10 rounded-xl py-4 pl-12 pr-6 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-xl"
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                    {/* Tournament Filter */}
+                                    <div className="relative md:w-64">
+                                        <select
+                                            className="w-full h-full bg-[#13131f] border border-white/10 rounded-xl py-4 pl-4 pr-10 text-white focus:outline-none focus:border-primary/50 appearance-none cursor-pointer"
+                                            value={selectedTournament}
+                                            onChange={e => setSelectedTournament(e.target.value)}
+                                        >
+                                            <option value="ALL">Todos los Torneos</option>
+                                            {localTournaments.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                                            <ChevronDown className="text-gray-500 w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* LIST SECTION */}
+                        <div className="max-w-3xl mx-auto px-4 pb-20 space-y-3">
+                            {sortedPlayers.map((player, idx) => (
+                                <PlayerCard
+                                    key={player.id}
+                                    player={player}
+                                    rank={idx + 1}
+                                    onClick={() => setSelectedPlayer(players.find(p => p.id === player.id))}
+                                />
+                            ))}
+                            {sortedPlayers.length === 0 && (
+                                <div className="text-center py-20 text-gray-600">
+                                    <Ghost className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                    <p>No se encontraron jugadores</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* FOOTER BUTTONS */}
+                        <div className="fixed bottom-6 right-6 z-30">
+                            <button
+                                onClick={() => setView('login')}
+                                className="w-12 h-12 rounded-full bg-primary hover:bg-primary/80 text-white flex items-center justify-center transition-all shadow-lg shadow-primary/30 transform hover:scale-110"
+                            >
+                                <Shield className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* INFO MODAL */}
+                        {showInfo && (
+                            <Modal isOpen={showInfo} onClose={() => setShowInfo(false)}>
+                                <div className="p-8">
+                                    <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                                        <Info className="w-6 h-6 text-primary" /> ¿Qué es Liga Multisport?
+                                    </h2>
+                                    <div className="prose prose-invert text-gray-300 whitespace-pre-line leading-relaxed">
+                                        {description}
+                                    </div>
+                                </div>
+                            </Modal>
+                        )}
+
+                        {/* PLAYER DETAILS MODAL */}
+                        {selectedPlayer && (
+                            <Modal isOpen={!!selectedPlayer} onClose={() => setSelectedPlayer(null)}>
+                                <div className="p-8 flex-1 overflow-auto custom-scrollbar">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div>
+                                            <h2 className="text-3xl font-bold text-white">{selectedPlayer.name}</h2>
+                                            <p className="text-primary font-bold text-xl">{selectedPlayer.points} Puntos Totales</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs uppercase font-bold text-gray-500 tracking-wider">Historial de Torneos</h3>
+                                        {selectedPlayer.history && selectedPlayer.history.slice().reverse().map((entry, i) => (
+                                            <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/5">
+                                                <div>
+                                                    <div className="font-bold text-white">{entry.tournament || 'Torneo Desconocido'}</div>
+                                                    <div className="text-xs text-gray-500">{formatDate(entry.date)}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={`font-bold ${['1º Puesto', '2º Puesto'].includes(entry.type) ? 'text-yellow-500' : 'text-gray-300'}`}>
+                                                        {entry.type}
+                                                    </div>
+                                                    <div className="text-sm font-mono text-primary">+{entry.points} pts</div>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {(!selectedPlayer.history || selectedPlayer.history.length === 0) && (
+                                            <p className="text-gray-600 text-center py-8">Sin historial detallado</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </Modal>
+                        )}
+                    </div>
+                );
+            }
+
+            if (view === 'login') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center px-4 relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-dark"></div>
+                        <div className="glass-panel p-10 rounded-3xl w-full max-w-md relative z-10 text-center space-y-8">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-2">Acceso Administrador</h2>
+                                <p className="text-gray-400 text-sm">Introduce la clave de seguridad</p>
+                            </div>
+                            <input
+                                type="password"
+                                autoFocus
+                                className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-center text-3xl tracking-[1em] text-white focus:outline-none focus:border-secondary transition-colors"
+                                value={adminPassInput}
+                                onChange={e => {
+                                    setAdminPassInput(e.target.value);
+                                    if (e.target.value === password) setView('admin');
+                                }}
+                            />
+                            <button onClick={() => { setView('public'); setAdminPassInput(''); }} className="text-gray-500 hover:text-white text-sm">Cancelar</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <AdminPanel
+                    players={players}
+                    processTournament={processTournament}
+                    goBack={() => { setView('public'); setAdminPassInput(''); }}
+                    manualDelete={manualDelete}
+                    manualUpdatePoints={manualUpdatePoints}
+                    password={password}
+                    setPassword={setPassword}
+                    description={description}
+                    setDescription={setDescription}
+                />
+            );
+        }
+
+        // --- ADMIN PANEL COMPONENT ---
+
+        function AdminPanel({ players, processTournament, goBack, manualDelete, manualUpdatePoints, password, setPassword, description, setDescription }) {
+            const [tName, setTName] = useState('');
+            const [tDate, setTDate] = useState(new Date().toISOString().split('T')[0]);
+
+            const [tFirst, setTFirst] = useState('');
+            const [tSecond, setTSecond] = useState('');
+            const [tOthers, setTOthers] = useState('');
+
+            const [showSettings, setShowSettings] = useState(false);
+            const [oldPass, setOldPass] = useState('');
+            const [newPass, setNewPass] = useState('');
+            const [descInput, setDescInput] = useState(description);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!tName) return alert("Ponle nombre al torneo");
+                processTournament(tName, tDate, tFirst, tSecond, tOthers);
+                setTFirst(''); setTSecond(''); setTOthers(''); setTName('');
+            };
+
+            const handlePassChange = () => {
+                if (oldPass !== password) {
+                    alert("La contraseña actual no es correcta.");
+                    return;
+                }
+                if (!newPass) {
+                    alert("Escribe una nueva contraseña");
+                    return;
+                }
+                setPassword(newPass);
+                alert("Contraseña cambiada exitosamente");
+                setNewPass('');
+                setOldPass('');
+            }
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 pb-32">
+                    <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-8">
+
+                        <div className="flex flex-col gap-8">
+                            {/* MENU */}
+                            <div className="flex gap-4">
+                                <button onClick={() => setShowSettings(!showSettings)} className="flex-1 glass-panel p-4 rounded-2xl flex items-center justify-center gap-2 font-bold hover:bg-white/5 transition-colors text-gray-300">
+                                    <Shield className="w-5 h-5" /> {showSettings ? 'Volver a Torneos' : 'Configuración'}
+                                </button>
+                                <button onClick={goBack} className="glass-panel px-6 rounded-2xl text-red-400 hover:bg-white/5 transition-colors font-bold">
+                                    Salir
+                                </button>
+                            </div>
+
+                            {showSettings ? (
+                                <div className="glass-panel p-6 md:p-8 rounded-3xl h-fit space-y-8 animate-fade-in-up">
+                                    <h2 className="text-2xl font-bold text-white">Configuración</h2>
+
+                                    <div className="space-y-4">
+                                        <h3 className="text-gray-400 uppercase text-xs font-bold">Descripción de la Liga</h3>
+                                        <textarea className="w-full h-40 bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-primary focus:outline-none"
+                                            value={descInput} onChange={e => setDescInput(e.target.value)} />
+                                        <button onClick={() => { setDescription(descInput); alert("Descripción actualizada"); }} className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg text-sm font-bold flex items-center gap-2">
+                                            <Save className="w-4 h-4" /> Guardar Texto
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4 border-t border-white/10 pt-4">
+                                        <h3 className="text-gray-400 uppercase text-xs font-bold">Seguridad</h3>
+                                        <input type="password" placeholder="Contraseña Actual" className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-secondary focus:outline-none mb-2"
+                                            value={oldPass} onChange={e => setOldPass(e.target.value)} />
+                                        <input type="password" placeholder="Nueva Contraseña" className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:border-secondary focus:outline-none"
+                                            value={newPass} onChange={e => setNewPass(e.target.value)} />
+                                        <button onClick={handlePassChange} className="px-4 py-2 bg-secondary/20 hover:bg-secondary/30 text-secondary rounded-lg text-sm font-bold">
+                                            Actualizar Contraseña
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ADD TOURNAMENT FORM */
+                                <div className="glass-panel p-6 md:p-8 rounded-3xl h-fit animate-fade-in-up">
+                                    <div className="flex justify-between items-center mb-8">
+                                        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                                            <PlusCircle className="text-secondary w-6 h-6" /> Nuevo Torneo
+                                        </h2>
+                                    </div>
+
+                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-xs uppercase font-bold text-gray-500 mb-2 block">Nombre Torneo</label>
+                                                <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl p-3 focus:border-secondary focus:outline-none text-white" placeholder="Ej: Torneo FIFA" value={tName} onChange={e => setTName(e.target.value)} required />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs uppercase font-bold text-gray-500 mb-2 block">Fecha</label>
+                                                <input type="date" className="w-full bg-black/40 border border-white/10 rounded-xl p-3 focus:border-secondary focus:outline-none text-white" value={tDate} onChange={e => setTDate(e.target.value)} />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="flex justify-between text-xs uppercase font-bold text-yellow-500 mb-2">
+                                                    <span>🥇 1º Puesto (+5 pts)</span>
+                                                </label>
+                                                <textarea className="w-full h-24 bg-yellow-900/10 border border-yellow-500/20 rounded-xl p-3 text-sm text-white focus:border-yellow-500 focus:outline-none transition-colors" placeholder="Nombres..." value={tFirst} onChange={e => setTFirst(e.target.value)}></textarea>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs uppercase font-bold text-gray-300 mb-2 block">🥈 2º Puesto (+3 pts)</label>
+                                                <textarea className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-gray-500 focus:outline-none" placeholder="Nombres..." value={tSecond} onChange={e => setTSecond(e.target.value)}></textarea>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs uppercase font-bold text-primary mb-2 block">Participantes (+1 pt)</label>
+                                                <textarea className="w-full h-32 bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm text-white focus:border-primary focus:outline-none" placeholder="Lista de nombres..." value={tOthers} onChange={e => setTOthers(e.target.value)}></textarea>
+                                                <p className="text-[10px] text-gray-500 mt-1">* El sistema evitará duplicar puntos si alguien ya está en 1º o 2º puesto.</p>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-secondary rounded-xl font-bold text-white shadow-lg hover:shadow-primary/25 transition-all transform hover:scale-[1.02]">
+                                            Guardar Resultados
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* PLAYER LIST (Right Side) */}
+                        <div className="glass-panel p-6 rounded-3xl h-[800px] flex flex-col">
+                            <h3 className="text-xl font-bold text-white mb-6">Base de Datos ({players.length})</h3>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                                {players.map(p => (
+                                    <div key={p.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 group">
+                                        <span className="font-medium text-gray-300">{p.name}</span>
+                                        <div className="flex items-center gap-4">
+                                            <span className="font-bold text-white">{p.points} pts</span>
+
+                                            {/* Quick Actions */}
+                                            <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => manualUpdatePoints(p.id, 1)} className="text-green-400 hover:bg-green-500/20 p-2 rounded" title="+1">
+                                                    <PlusCircle className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => manualUpdatePoints(p.id, -1)} className="text-yellow-400 hover:bg-yellow-500/20 p-2 rounded" title="-1">
+                                                    <div className="w-4 h-4 flex items-center justify-center font-bold">-</div>
+                                                </button>
+                                                <button onClick={() => manualDelete(p.id)} className="text-red-500 hover:bg-red-500/20 p-2 rounded" title="Eliminar">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

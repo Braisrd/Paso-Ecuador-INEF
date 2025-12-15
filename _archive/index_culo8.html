@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paso de Ecuador 25/26 - INEF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { dark: '#0a0a0f', card: '#13131f', celestial: '#38bdf8', celestialDark: '#0284c7', ligaPrimary: '#6366f1', ligaSecondary: '#ec4899', }, fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Outfit', 'sans-serif'], }, animation: { 'float': 'float 6s ease-in-out infinite', 'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite', 'fade-in-up': 'fadeInUp 0.8s ease-out forwards', }, keyframes: { float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' }, }, fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' }, } } } } }
+    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        const firebaseConfig = { apiKey: "AIzaSyCmuNrhWE8Aw24_qUK23Qo4u_W5M6cAFN4", authDomain: "liga-multisport.firebaseapp.com", projectId: "liga-multisport", storageBucket: "liga-multisport.firebasestorage.app", messagingSenderId: "983340811794", appId: "1:983340811794:web:a86d9e3dbb620accebbacb", measurementId: "G-TPNXY1LNX9" };
+        const app = initializeApp(firebaseConfig); window.db = getFirestore(app); window.collection = collection; window.addDoc = addDoc; window.updateDoc = updateDoc; window.deleteDoc = deleteDoc; window.doc = doc; window.getDoc = getDoc; window.setDoc = setDoc; window.onSnapshot = onSnapshot; window.query = query; window.orderBy = orderBy; window.limit = limit;
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@300;500;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #0a0a0f;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .bg-celestial {
+            background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 60%), radial-gradient(circle at 10% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+        }
+
+        .glass-panel {
+            background: rgba(19, 19, 31, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .clip-diagonal {
+            clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        input[type="date"],
+        input[type="time"] {
+            color-scheme: dark;
+        }
+    </style>
+</head>
+
+<body class="bg-celestial">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, Fragment } = React;
+
+        const HOLIDAYS = [
+            { date: '2025-01-01', name: 'Año Nuevo' }, { date: '2025-01-06', name: 'Reyes' }, { date: '2025-01-27', name: 'Sto. Tomás (UDC)' },
+            { date: '2025-03-03', name: 'Carnaval' }, { date: '2025-03-04', name: 'Carnaval' },
+            { date: '2025-04-14', name: 'Semana Santa' }, { date: '2025-04-15', name: 'Semana Santa' }, { date: '2025-04-16', name: 'Semana Santa' }, { date: '2025-04-17', name: 'Jueves Santo' }, { date: '2025-04-18', name: 'Viernes Santo' },
+            { date: '2025-05-01', name: 'Día del Trabajo' }, { date: '2025-05-17', name: 'Letras Galegas' },
+            { date: '2025-06-24', name: 'San Juan' }, { date: '2025-07-25', name: 'Día de Galicia' },
+            { date: '2025-08-15', name: 'Asunción' },
+            { date: '2025-10-12', name: 'Fiesta Nacional' }, { date: '2025-11-01', name: 'Todos los Santos' },
+            { date: '2025-12-06', name: 'Constitución' }, { date: '2025-12-08', name: 'Inmaculada' }, { date: '2025-12-25', name: 'Navidad' },
+            // 2026 Extended
+            { date: '2026-01-01', name: 'Año Nuevo' }, { date: '2026-01-06', name: 'Reyes' },
+            { date: '2026-03-30', name: 'Semana Santa' }, { date: '2026-03-31', name: 'Semana Santa' },
+            { date: '2026-04-01', name: 'Semana Santa' }, { date: '2026-04-02', name: 'Jueves Santo' }, { date: '2026-04-03', name: 'Viernes Santo' },
+            { date: '2026-05-01', name: 'Día del Trabajo' }, { date: '2026-05-17', name: 'Letras Galegas' }
+        ];
+
+        const DEFAULT_EVENT_TYPES = [{ id: 'party', name: 'Fiesta', color: '#ec4899', icon: '🎉' }, { id: 'tournament', name: 'Torneo', color: '#f59e0b', icon: '🏆' }, { id: 'tickets', name: 'Entradas', color: '#8b5cf6', icon: '🎫' }, { id: 'special', name: 'Evento Especial', color: '#10b981', icon: '⭐' }];
+
+        const Icon = ({ d, className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{d}</svg>;
+        const CalendarIcon = (p) => <Icon {...p} d={<Fragment><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></Fragment>} />;
+        const MapPin = (p) => <Icon {...p} d={<Fragment><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></Fragment>} />;
+        const Lock = (p) => <Icon {...p} d={<Fragment><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></Fragment>} />;
+        const Trash = (p) => <Icon {...p} d={<Fragment><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></Fragment>} />;
+        const Edit = (p) => <Icon {...p} d={<Fragment><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></Fragment>} />;
+        const ExternalLink = (p) => <Icon {...p} d={<Fragment><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" x2="21" y1="14" y2="3" /></Fragment>} />;
+        const Checks = (p) => <Icon {...p} d={<Fragment><path d="M18 6 7 17l-5-5" /><path d="m22 10-7.5 7.5L13 16" /></Fragment>} />;
+        const ChevronLeft = (p) => <Icon {...p} d={<path d="m15 18-6-6 6-6" />} />;
+        const ChevronRight = (p) => <Icon {...p} d={<path d="m9 18 6-6-6-6" />} />;
+        const Settings = (p) => <Icon {...p} d={<Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></Fragment>} />;
+        const Upload = (p) => <Icon {...p} d={<Fragment><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></Fragment>} />;
+        const Plus = (p) => <Icon {...p} d={<Fragment><path d="M5 12h14" /><path d="M12 5v14" /></Fragment>} />;
+        const X = (p) => <Icon {...p} d={<Fragment><path d="M18 6 6 18" /><path d="m6 6 12 12" /></Fragment>} />;
+        const Clock = (p) => <Icon {...p} d={<Fragment><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></Fragment>} />;
+        const Alert = (p) => <Icon {...p} d={<Fragment><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12.01" y1="17" y2="17" /></Fragment>} />;
+
+        const compressImage = async (file) => { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = (event) => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; const MAX_WIDTH = 1200; const MAX_HEIGHT = 1200; if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }; reader.onerror = error => reject(error); }); };
+
+        const Modal = ({ isOpen, onClose, children, size = 'md' }) => {
+            if (!isOpen) return null;
+            const sizeClass = size === 'lg' ? 'max-w-4xl' : size === 'xl' ? 'max-w-6xl' : 'max-w-2xl';
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={onClose}>
+                    <div className={`bg-[#13131f] border border-white/10 rounded-2xl w-full ${sizeClass} my-8 max-h-[90vh] overflow-y-auto relative shadow-2xl`} onClick={e => e.stopPropagation()}>
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10 p-2 bg-black/20 rounded-full hover:bg-black/50 transition-colors"><X className="w-5 h-5" /></button>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        const ActionButton = ({ action, onOpenForm }) => {
+            const [loading, setLoading] = useState(false);
+            const [voted, setVoted] = useState(false);
+            const [showOptions, setShowOptions] = useState(false);
+
+            useEffect(() => { const stored = localStorage.getItem(`action_${action.id}`); if (stored) setVoted(stored); }, [action.id]);
+
+            const handleVote = async (option) => {
+                if (loading) return; setLoading(true);
+                try {
+                    localStorage.setItem(`action_${action.id}`, option);
+                    setVoted(option);
+                    setShowOptions(false);
+                    // Firestore integration here
+                } finally { setLoading(false); }
+            };
+
+            const btnStyle = { backgroundColor: action.color || (action.style === 'primary' ? '#38bdf8' : '#ffffff10'), color: action.color ? (['#ffffff', '#f8f8f8'].includes(action.color) ? 'black' : 'white') : 'white' };
+            const cls = `w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg relative`;
+
+            if (action.type === 'link') {
+                return <a href={action.link} target="_blank" onClick={e => e.stopPropagation()} className={cls} style={btnStyle}><ExternalLink className="w-5 h-5" /> {action.label || 'Ver Más'}</a>;
+            }
+            if (action.type === 'form') {
+                return <button onClick={(e) => { e.stopPropagation(); onOpenForm(action); }} className={cls} style={btnStyle}>{action.label || 'Inscribirse'}</button>;
+            }
+            if (action.type === 'survey') {
+                const hasOptions = action.options && action.options.length > 0;
+                if (hasOptions) {
+                    return (
+                        <div className="w-full relative">
+                            <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions) }} className={cls} style={btnStyle}>{voted ? `Votado: ${voted}` : (action.label || 'Votar')}</button>
+                            {showOptions && (
+                                <div className="absolute bottom-full left-0 w-full mb-2 bg-[#1c1c2e] border border-white/10 rounded-xl p-2 shadow-xl z-20 flex flex-col gap-2">
+                                    {action.options.map(opt => (
+                                        <button key={opt} onClick={(e) => { e.stopPropagation(); handleVote(opt); }} className="p-3 text-left hover:bg-white/10 rounded-lg text-sm">{opt}</button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                } else {
+                    return (
+                        <button onClick={(e) => { e.stopPropagation(); handleVote(voted ? '' : 'Asistiré'); }} className={`${cls} ${voted ? 'border-2 border-green-500 text-green-400 bg-green-500/10' : ''}`} style={voted ? {} : btnStyle}>
+                            <Checks className="w-5 h-5" /> {voted ? 'Confirmado' : (action.label || 'Asistiré')}
+                        </button>
+                    );
+                }
+            }
+            return null;
+        };
+
+        const ActionBuilder = ({ actions, onChange, limitOne = false }) => {
+            const addAction = () => {
+                if (limitOne && actions.length > 0) return;
+                onChange([...(actions || []), { id: Date.now(), type: 'link', label: 'Botón', link: '', color: '#38bdf8', options: [] }]);
+            };
+            const updateAction = (id, k, v) => onChange(actions.map(a => a.id === id ? { ...a, [k]: v } : a));
+            const removeAction = (id) => onChange(actions.filter(a => a.id !== id));
+
+            return (
+                <div className="space-y-4 bg-black/20 p-4 rounded-xl border border-white/10">
+                    <div className="flex justify-between items-center">
+                        <label className="text-sm font-bold text-gray-400">Acciones ({actions?.length || 0})</label>
+                        {(!limitOne || (actions || []).length === 0) && <button type="button" onClick={addAction} className="text-xs bg-celestial text-black px-3 py-1 rounded font-bold hover:bg-celestialDark">+ Añadir</button>}
+                    </div>
+                    {(actions || []).map(a => (
+                        <div key={a.id} className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-3">
+                            <div className="flex gap-2">
+                                <select value={a.type} onChange={e => updateAction(a.id, 'type', e.target.value)} className="bg-black/40 p-2 rounded text-sm w-1/3 border border-white/10">
+                                    <option value="link">Enlace</option>
+                                    <option value="survey">Encuesta/Voto</option>
+                                    <option value="form">Formulario</option>
+                                </select>
+                                <input value={a.label} onChange={e => updateAction(a.id, 'label', e.target.value)} placeholder="Texto Botón" className="bg-black/40 p-2 rounded text-sm flex-1 border border-white/10" />
+                                <input type="color" value={a.color} onChange={e => updateAction(a.id, 'color', e.target.value)} className="h-9 w-9 p-1 bg-black/40 rounded border border-white/10 cursor-pointer" title="Color Fondo" />
+                                <button type="button" onClick={() => removeAction(a.id)} className="text-red-500 px-2"><X className="w-4 h-4" /></button>
+                            </div>
+
+                            {a.type === 'link' && <input value={a.link} onChange={e => updateAction(a.id, 'link', e.target.value)} placeholder="https://..." className="w-full bg-black/40 p-2 rounded text-sm border border-white/10" />}
+
+                            {a.type === 'survey' && (
+                                <div className="space-y-2">
+                                    <div className="text-xs text-gray-500">Opciones (deja vacío para simple "Asistiré"):</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(a.options || []).map((opt, idx) => (
+                                            <span key={idx} className="bg-black/40 px-2 py-1 rounded text-xs flex items-center gap-1 border border-white/10">{opt} <button type="button" onClick={() => updateAction(a.id, 'options', a.options.filter((_, i) => i !== idx))} className="text-red-400">x</button></span>
+                                        ))}
+                                        <button type="button" onClick={() => { const val = prompt('Nueva opción:'); if (val) updateAction(a.id, 'options', [...(a.options || []), val]); }} className="text-xs text-celestial border border-celestial px-2 py-1 rounded hover:bg-celestial/10">+ Opción</button>
+                                    </div>
+                                </div>
+                            )}
+                            {a.type === 'form' && <div className="p-2 bg-black/40 rounded border border-white/10 text-xs text-center text-gray-400">Configuración de campos (Simplificada)</div>}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const ImageUploader = ({ value, onChange }) => {
+            const handleFile = async (files) => { const file = files[0]; if (!file) return; try { const compressed = await compressImage(file); onChange(compressed); } catch (err) { alert('Error al procesar la imagen'); } };
+            return (
+                <div className="space-y-2">
+                    <div className="flex gap-2" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files); }}>
+                        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)} onPaste={e => { if (e.clipboardData.files.length) handleFile(e.clipboardData.files); }} placeholder="Imagen (URL, Pegar o Arrastrar)" className="flex-1 bg-black/40 p-3 rounded border border-white/10 text-white" />
+                        <label className="cursor-pointer bg-white/10 hover:bg-white/20 p-3 rounded border border-white/10 flex items-center justify-center"><Upload className="w-5 h-5" /><input type="file" className="hidden" accept="image/*" onChange={e => handleFile(e.target.files)} /></label>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminDashboard = ({ isOpen, onClose, events, eventTypes, onSaveEvent, onDeleteEvent, onAddEventType, onDeleteEventType, specialSections, onUpdateSpecialSections }) => {
+            const [tab, setTab] = useState('events');
+            // NEW: Updated Initial Form with 'time' and 'actions' instead of old fields
+            const INITIAL_EVENT = { title: '', date: '', time: '', location: '', typeId: 'party', description: '', imageUrl: '', actions: [] };
+            const [evtData, setEvtData] = useState(INITIAL_EVENT);
+            const [editEvtId, setEditEvtId] = useState(null);
+            const [newType, setNewType] = useState({ name: '', color: '#38bdf8', icon: '📌' });
+
+            const saveEvt = (e) => {
+                e.preventDefault();
+                onSaveEvent(evtData, editEvtId);
+                setEvtData(INITIAL_EVENT); setEditEvtId(null);
+            };
+
+            const updateSection = (id, field, val) => {
+                onUpdateSpecialSections(specialSections.map(s => s.id === id ? { ...s, [field]: val } : s));
+            };
+
+            return (
+                <Modal isOpen={isOpen} onClose={onClose} size="xl">
+                    <div className="p-8">
+                        <div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold">Panel Admin</h2><div className="flex bg-black/40 p-1 rounded-lg">{[{ id: 'events', l: 'Eventos' }, { id: 'types', l: 'Tipos' }, { id: 'special', l: 'Secciones' }].map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`px-4 py-2 rounded-md font-bold text-sm ${tab === t.id ? 'bg-celestial text-black' : 'text-gray-400'}`}>{t.l}</button>)}</div></div>
+
+                        {tab === 'events' && (
+                            <div className="grid lg:grid-cols-2 gap-8">
+                                <form onSubmit={saveEvt} className="space-y-4">
+                                    <h3 className="font-bold text-celestial">{editEvtId ? 'Editar Evento' : 'Nuevo Evento'}</h3>
+                                    <input value={evtData.title} onChange={e => setEvtData({ ...evtData, title: e.target.value })} placeholder="Título" required className="w-full bg-black/40 p-3 rounded border border-white/10" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input value={evtData.date} onChange={e => setEvtData({ ...evtData, date: e.target.value })} type="date" required className="bg-black/40 p-3 rounded border border-white/10" />
+                                        <input value={evtData.time} onChange={e => setEvtData({ ...evtData, time: e.target.value })} type="time" className="bg-black/40 p-3 rounded border border-white/10" title="Hora" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <select value={evtData.typeId} onChange={e => setEvtData({ ...evtData, typeId: e.target.value })} className="bg-black/40 p-3 rounded border border-white/10">{eventTypes.map(t => <option key={t.id} value={t.id}>{t.icon} {t.name}</option>)}</select>
+                                        <input value={evtData.location} onChange={e => setEvtData({ ...evtData, location: e.target.value })} placeholder="Ubicación" className="w-full bg-black/40 p-3 rounded border border-white/10" />
+                                    </div>
+                                    <textarea value={evtData.description} onChange={e => setEvtData({ ...evtData, description: e.target.value })} placeholder="Descripción" className="w-full bg-black/40 p-3 rounded border border-white/10" rows="3" />
+                                    <ImageUploader value={evtData.imageUrl} onChange={v => setEvtData({ ...evtData, imageUrl: v })} />
+                                    <div className="border border-white/10 rounded p-2"><p className="text-sm font-bold text-gray-400 mb-2">Acción Principal</p>
+                                        <ActionBuilder actions={evtData.actions} onChange={a => setEvtData({ ...evtData, actions: a })} limitOne={true} />
+                                    </div>
+                                    <button className="w-full bg-celestial text-black py-3 rounded font-bold">{editEvtId ? 'Guardar Cambios' : 'Crear Evento'}</button>
+                                </form>
+                                <div className="space-y-2 max-h-[600px] overflow-y-auto">{events.map(e => <div key={e.id} className="flex justify-between items-center bg-white/5 p-3 rounded group hover:bg-white/10"><div><div className="font-bold">{e.title}</div><div className="text-xs text-gray-400">{e.date} {e.time}</div></div><div className="flex gap-1 opacity-0 group-hover:opacity-100"><button onClick={() => { setEvtData({ ...e, actions: e.actions || [] }); setEditEvtId(e.id); }} className="text-celestial p-2"><Edit className="w-4 h-4" /></button><button onClick={() => onDeleteEvent(e.id)} className="text-red-500 p-2"><Trash className="w-4 h-4" /></button></div></div>)}</div>
+                            </div>
+                        )}
+
+                        {tab === 'types' && (<div className="grid grid-cols-4 gap-4"><input value={newType.name} onChange={e => setNewType({ ...newType, name: e.target.value })} placeholder="Nombre" className="col-span-2 bg-black/40 p-3 rounded" /><input value={newType.color} onChange={e => setNewType({ ...newType, color: e.target.value })} type="color" className="bg-black/40 p-2 h-full w-full rounded" /><input value={newType.icon} onChange={e => setNewType({ ...newType, icon: e.target.value })} placeholder="Emoji" className="bg-black/40 p-3 rounded text-center" /><button onClick={() => { onAddEventType({ ...newType, id: Date.now().toString() }); setNewType({ name: '', color: '#38bdf8', icon: '📌' }); }} className="col-span-4 bg-white/10 py-3 rounded font-bold">Añadir Tipo</button><div className="col-span-4 grid md:grid-cols-3 gap-4">{eventTypes.map(t => <div key={t.id} className="flex items-center justify-between p-4 rounded bg-[#0a0a0f] border border-white/10" style={{ borderLeft: `4px solid ${t.color}` }}><span>{t.icon} {t.name}</span>{!['party', 'tournament', 'tickets', 'special'].includes(t.id) && <button onClick={() => onDeleteEventType(t.id)} className="text-red-500"><Trash className="w-4 h-4" /></button>}</div>)}</div></div>)}
+
+                        {tab === 'special' && (
+                            <div className="space-y-6">
+                                <div className="flex justify-between"><h3 className="font-bold">Secciones</h3><button onClick={() => onUpdateSpecialSections([...specialSections, { id: Date.now(), title: '', description: '', active: true, actions: [] }])} className="bg-white/10 px-4 py-2 rounded">+ Nueva</button></div>
+                                {specialSections.map(s => (
+                                    <div key={s.id} className="bg-white/5 p-4 rounded border border-white/10 space-y-3 relative">
+                                        <div className="flex justify-between"><label className="flex gap-2 font-bold"><input type="checkbox" checked={s.active} onChange={e => updateSection(s.id, 'active', e.target.checked)} /> Visible</label><button onClick={() => onUpdateSpecialSections(specialSections.filter(x => x.id !== s.id))} className="text-red-400 text-xs">ELIMINAR</button></div>
+                                        <input value={s.title} onChange={e => updateSection(s.id, 'title', e.target.value)} placeholder="Título" className="w-full bg-black/40 p-2 rounded" />
+                                        {/* NEW: Date and Urgency Inputs */}
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div><label className="text-gray-500">Fecha Inicio (Opc)</label><input type="date" value={s.startDate || ''} onChange={e => updateSection(s.id, 'startDate', e.target.value)} className="w-full bg-black/40 p-2 rounded" /></div>
+                                            <div><label className="text-gray-500">Fecha Fin (Opc)</label><input type="date" value={s.endDate || ''} onChange={e => updateSection(s.id, 'endDate', e.target.value)} className="w-full bg-black/40 p-2 rounded" /></div>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-xs bg-black/20 p-2 rounded">
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={s.urgentAlert || false} onChange={e => updateSection(s.id, 'urgentAlert', e.target.checked)} /> Activar Aviso "Últimos Días"</label>
+                                            {s.urgentAlert && <label className="flex items-center gap-2">Días antes: <input type="number" value={s.urgentDays || 3} onChange={e => updateSection(s.id, 'urgentDays', e.target.value)} className="w-12 bg-black/40 p-1 rounded text-center" /></label>}
+                                        </div>
+                                        <textarea value={s.description} onChange={e => updateSection(s.id, 'description', e.target.value)} placeholder="Descripción..." className="w-full bg-black/40 p-2 rounded" rows="2" />
+                                        <ImageUploader value={s.imageUrl} onChange={v => updateSection(s.id, 'imageUrl', v)} />
+                                        {/* NEW: ActionBuilder for multiple buttons */}
+                                        <ActionBuilder actions={s.actions} onChange={a => updateSection(s.id, 'actions', a)} limitOne={false} />
+                                    </div>
+                                ))}
+                                <button onClick={() => { window.setDoc(window.doc(window.db, 'config', 'specialSections'), { sections: specialSections }); alert('Guardado'); }} className="w-full bg-celestial text-black py-3 rounded font-bold">GUARDAR SECCIONES</button>
+                            </div>
+                        )}
+                    </div>
+                </Modal>
+            );
+        };
+
+        const AdminLogin = ({ onClose, onSuccess }) => {
+            const [pass, setPass] = useState('');
+            const handleLogin = (e) => { e.preventDefault(); if (pass === (localStorage.getItem('liga_password') || '4321')) onSuccess(); else alert('Contraseña incorrecta'); };
+            return <Modal isOpen={true} onClose={onClose}><div className="p-8 text-center"><h2 className="text-2xl font-bold mb-4">Acceso Admin</h2><form onSubmit={handleLogin}><input type="password" autoFocus className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-center text-white text-xl tracking-widest mb-4 placeholder-gray-600" placeholder="••••" value={pass} onChange={e => setPass(e.target.value)} /><div className="flex gap-2 justify-center"><button type="button" onClick={onClose} className="px-4 py-2 text-gray-400">Cancelar</button><button className="px-6 py-2 bg-celestial text-black font-bold rounded-lg hover:opacity-90">Entrar</button></div></form></div></Modal>;
+        };
+
+        const EventRegistrationModal = ({ action, onClose, eventTitle }) => {
+            const [formData, setFormData] = useState({});
+            const handleSubmit = async (e) => { e.preventDefault(); try { await window.addDoc(window.collection(window.db, "event_registrations"), { actionLabel: action.label, eventTitle: eventTitle || 'Desconocido', submittedAt: new Date().toISOString(), ...formData }); alert('¡Inscripción Enviada!'); onClose(); } catch (err) { alert('Error al enviar.'); } };
+            return <Modal isOpen={true} onClose={onClose}><div className="p-8"><h2 className="text-2xl font-bold mb-4">Inscripción</h2><form onSubmit={handleSubmit} className="space-y-4"><input required placeholder="Nombre Completo" className="w-full bg-black/40 p-3 rounded" onChange={e => setFormData({ ...formData, nombre: e.target.value })} /><input required placeholder="Email" type="email" className="w-full bg-black/40 p-3 rounded" onChange={e => setFormData({ ...formData, email: e.target.value })} /><button className="w-full bg-celestial text-black font-bold py-3 rounded mt-4 hover:bg-celestialDark transition-colors">Confirmar Inscripción</button></form></div></Modal>;
+        };
+
+        const EventDetailModal = ({ event, onClose, onOpenForm }) => (
+            <Modal isOpen={true} onClose={onClose} size="lg">
+                <div className="relative">
+                    {event.imageUrl && <div className="w-full h-64 md:h-80"><img src={event.imageUrl} className="w-full h-full object-cover" /></div>}
+                    <div className="p-8">
+                        <div className="inline-block px-3 py-1 mb-4 rounded-full text-xs font-bold uppercase border" style={{ color: event.typeColor, borderColor: event.typeColor, backgroundColor: `${event.typeColor}20` }}>{event.typeIcon} {event.typeName}</div>
+                        <h2 className="text-4xl font-black mb-2 text-white leading-tight">{event.title}</h2>
+                        <div className="flex flex-col gap-1 mb-6">
+                            <div className="flex items-center gap-2 text-celestial font-bold"><CalendarIcon className="w-5 h-5" /> {new Date(event.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                            {event.time && <div className="flex items-center gap-2 text-gray-300 font-bold"><Clock className="w-5 h-5" /> {event.time}</div>}
+                            {event.location && <div className="flex items-center gap-2 text-gray-400"><MapPin className="w-5 h-5" /> {event.location}</div>}
+                        </div>
+                        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mb-6"><p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{event.description}</p></div>
+                        <div className="flex flex-col gap-3">
+                            {(event.actions || []).map(a => <ActionButton key={a.id} action={a} onOpenForm={onOpenForm} />)}
+                            <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${event.date.replace(/-/g, '')}T000000/${event.date.replace(/-/g, '')}T235959&details=${encodeURIComponent(event.description)}&location=${encodeURIComponent(event.location)}`} target="_blank" className="w-full py-3 rounded-xl border border-white/20 hover:bg-white/10 flex items-center justify-center gap-2 text-gray-300 transition-colors"><CalendarIcon className="w-5 h-5" /> Añadir a Google Calendar</a>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+        );
+
+        const SectionDetailModal = ({ section, onClose }) => (
+            <Modal isOpen={true} onClose={onClose} size="lg">
+                <div className="relative">
+                    {section.imageUrl && <div className="w-full h-64 md:h-80"><img src={section.imageUrl} className="w-full h-full object-cover" /></div>}
+                    <div className="p-8">
+                        <h2 className="text-4xl font-black mb-4 text-white">{section.title}</h2>
+                        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mb-6"><p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{section.description}</p></div>
+                        <div className="flex flex-col gap-3">
+                            {(section.actions || []).map(a => <ActionButton key={a.id} action={a} />)}
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+        );
+
+        function App() {
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [showLogin, setShowLogin] = useState(false);
+            const [showAdminPanel, setShowAdminPanel] = useState(false);
+            const [events, setEvents] = useState([]);
+            const [eventTypes, setEventTypes] = useState(DEFAULT_EVENT_TYPES);
+            const [specialSections, setSpecialSections] = useState([]);
+            const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+            const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+            const [selectedDay, setSelectedDay] = useState(null);
+
+            // Standard v6 Modal States
+            const [expandedEvent, setExpandedEvent] = useState(null);
+            const [expandedSection, setExpandedSection] = useState(null);
+            const [regFormAction, setRegFormAction] = useState(null);
+
+            useEffect(() => {
+                if (!window.db) return;
+                const u1 = window.onSnapshot(window.query(window.collection(window.db, "events"), window.orderBy("date", "asc")), s => setEvents(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const u2 = window.onSnapshot(window.doc(window.db, "config", "eventTypes"), d => setEventTypes(d.exists() ? (d.data().types || DEFAULT_EVENT_TYPES) : DEFAULT_EVENT_TYPES));
+                const u3 = window.onSnapshot(window.doc(window.db, "config", "specialSections"), d => setSpecialSections(d.exists() ? (d.data().sections || []) : []));
+                return () => { u1(); u2(); u3(); };
+            }, []);
+
+            const monthData = useMemo(() => {
+                const dt = new Date(currentYear, currentMonth, 1);
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                const startOff = dt.getDay() === 0 ? 6 : dt.getDay() - 1;
+                return { days: Array(startOff).fill(null).concat([...Array(daysInMonth).keys()].map(i => i + 1)), name: dt.toLocaleString('es-ES', { month: 'long' }).toUpperCase() };
+            }, [currentMonth, currentYear]);
+
+            const upcoming = events.filter(e => new Date(e.date) >= new Date(new Date().setHours(0, 0, 0, 0)));
+            const handleDayNav = (dir) => {
+                if (!selectedDay) return;
+                const curr = new Date(selectedDay.date);
+                curr.setDate(curr.getDate() + dir);
+                const dateStr = curr.toISOString().split('T')[0];
+                setSelectedDay({ date: dateStr, events: events.filter(e => e.date === dateStr), holiday: HOLIDAYS.find(h => h.date === dateStr) });
+            };
+
+            const isUrgent = (s) => {
+                if (!s.endDate || !s.urgentAlert) return false;
+                const end = new Date(s.endDate);
+                const now = new Date();
+                const diffMs = end - now;
+                const diffDays = diffMs / (1000 * 60 * 60 * 24);
+                return diffDays >= 0 && diffDays <= (s.urgentDays || 3);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col relative font-sans">
+                    {/* Modals */}
+                    {expandedEvent && <EventDetailModal event={expandedEvent} onClose={() => setExpandedEvent(null)} onOpenForm={(action) => { setExpandedEvent(null); setRegFormAction({ action, eventTitle: expandedEvent.title }); }} />}
+                    {expandedSection && <SectionDetailModal section={expandedSection} onClose={() => setExpandedSection(null)} />}
+                    {regFormAction && <EventRegistrationModal action={regFormAction.action} eventTitle={regFormAction.eventTitle} onClose={() => setRegFormAction(null)} />}
+
+                    {showLogin && <AdminLogin onClose={() => setShowLogin(false)} onSuccess={() => { setIsAdmin(true); setShowLogin(false); setShowAdminPanel(true); }} />}
+                    {showAdminPanel && <AdminDashboard isOpen={true} onClose={() => setShowAdminPanel(false)} events={events} eventTypes={eventTypes} specialSections={specialSections} onSaveEvent={async (d, id) => { const type = eventTypes.find(t => t.id === d.typeId); const final = { ...d, typeColor: type?.color, typeIcon: type?.icon, typeName: type?.name }; if (id) await window.updateDoc(window.doc(window.db, 'events', id), final); else await window.addDoc(window.collection(window.db, 'events'), final); alert('OK'); }} onDeleteEvent={id => window.deleteDoc(window.doc(window.db, 'events', id))} onUpdateSpecialSections={setSpecialSections} />}
+
+                    {/* Day Modal */}
+                    {selectedDay && <Modal isOpen={true} onClose={() => setSelectedDay(null)}><div className="p-8"><div className="flex justify-between items-center mb-6"><button onClick={() => handleDayNav(-1)}><ChevronLeft /></button><h2 className="text-3xl font-black capitalize">{new Date(selectedDay.date).toLocaleDateString()}</h2><button onClick={() => handleDayNav(1)}><ChevronRight /></button></div><div className="space-y-4">{selectedDay.events.map(e => <div key={e.id} onClick={() => setExpandedEvent(e)} className="bg-white/5 p-4 rounded border-l-4 cursor-pointer hover:bg-white/10" style={{ borderColor: e.typeColor }}>{e.title}</div>)}</div></div></Modal>}
+
+                    {/* Navbar */}
+                    <div className="fixed top-4 right-4 z-50 flex gap-2">
+                        {isAdmin && <button onClick={() => setShowAdminPanel(true)} className="p-3 bg-celestial text-black rounded-full shadow-lg"><Settings className="w-5 h-5" /></button>}
+                        <button onClick={() => isAdmin ? setIsAdmin(false) : setShowLogin(true)} className={`p-3 rounded-full shadow-lg ${isAdmin ? 'bg-red-500' : 'bg-white/5'}`}><Lock className="w-5 h-5" /></button>
+                    </div>
+
+                    {/* Hero */}
+                    <section className="min-h-[85vh] flex flex-col items-center justify-center p-6 relative clip-diagonal bg-[#0a0a0f]">
+                        <div className="absolute inset-0 bg-celestial/10 blur-[100px] pointer-events-none"></div>
+                        <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 animate-float"><img src="./liga-multisport/logo.png" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(56,189,248,0.3)]" /></div>
+                        <h1 className="text-5xl md:text-8xl font-black text-center tracking-tighter mb-4"><span className="text-white">PASO DE </span><span className="text-celestial text-glow">ECUADOR</span></h1>
+                        <p className="text-xl md:text-2xl text-gray-400 font-light tracking-wide mb-12">INEF 25/26</p>
+                    </section>
+
+                    {/* Sections */}
+                    {specialSections.filter(s => s.active).map(s => (
+                        <section key={s.id} className="py-12 px-4 md:px-8 max-w-7xl mx-auto w-full">
+                            <div className="glass-panel p-8 md:p-12 rounded-3xl border-l-4 border-celestial relative overflow-hidden group cursor-pointer" onClick={() => setExpandedSection(s)}>
+                                {s.imageUrl && <img src={s.imageUrl} className="absolute right-0 top-0 w-full h-full object-cover opacity-20" />}
+                                {isUrgent(s) && <div className="absolute top-4 right-4 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold animate-pulse flex gap-2 z-10"><Alert className="w-4 h-4" /> ¡Últimos Días!</div>}
+                                <div className="relative z-10">
+                                    <h2 className="text-4xl font-bold mb-4">{s.title}</h2>
+                                    <p className="text-lg text-gray-300 mb-6 whitespace-pre-line line-clamp-3">{s.description}</p>
+                                    <div className="flex flex-wrap gap-4">
+                                        <button className="px-6 py-3 bg-celestial text-black rounded-lg font-bold">Ver +</button>
+                                        {(s.actions || []).map(a => <div key={a.id} className="w-auto"><ActionButton action={a} onOpenForm={(act) => { setExpandedSection(null); setRegFormAction({ action: act, eventTitle: s.title }); }} /></div>)}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    ))}
+
+                    {/* Events */}
+                    <section id="events" className="py-20 px-4 md:px-8 max-w-7xl mx-auto w-full">
+                        <h2 className="text-4xl font-bold mb-12 flex items-center gap-4"><span className="w-2 h-12 bg-celestial rounded-full"></span>Próximamente</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {upcoming.map(evt => (
+                                <div key={evt.id} onClick={() => setExpandedEvent(evt)} className="glass-panel p-6 rounded-3xl hover:bg-[#1c1c2e] transition-all relative overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl">
+                                    <div className="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold uppercase border bg-black/50 backdrop-blur-md z-10" style={{ color: evt.typeColor, borderColor: evt.typeColor }}>{evt.typeIcon} {evt.typeName}</div>
+                                    {evt.imageUrl && <div className="w-full h-48 mb-4 rounded-xl overflow-hidden"><img src={evt.imageUrl} className="w-full h-full object-cover" /></div>}
+                                    <div className="text-celestial font-bold tracking-wider text-sm mb-2">{new Date(evt.date).toLocaleDateString()}</div>
+                                    <h3 className="text-2xl font-bold text-white mb-2">{evt.title}</h3>
+                                    {evt.time && <div className="flex items-center gap-2 text-gray-300 text-sm mb-2"><Clock className="w-4 h-4" /> {evt.time}</div>}
+                                    <p className="text-gray-400 text-sm mb-4 line-clamp-3">{evt.description}</p>
+                                    <div className="mt-auto">{(evt.actions || []).map(a => <ActionButton key={a.id} action={a} onOpenForm={(act) => { setExpandedEvent(null); setRegFormAction({ action: act, eventTitle: evt.title }); }} />)}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <div className="relative py-32 bg-[#050507]">
+                        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0a0a0f] to-[#050507]"></div>
+                        <section className="relative z-10 max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center"><div><h2 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter"><span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">LIGA</span><br /><span className="bg-gradient-to-r from-ligaPrimary to-ligaSecondary bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">MULTISPORT</span></h2><p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-md">Compite en torneos, acumula puntos y lidera el ranking anual.</p><a href="./liga-multisport/index.html" className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-ligaPrimary to-ligaSecondary text-white font-black text-xl hover:scale-105 transition-transform shadow-[0_0_30px_rgba(236,72,153,0.4)]">VER CLASIFICACIÓN <ExternalLink className="w-6 h-6" /></a></div><div className="relative group"><div className="absolute inset-0 bg-gradient-to-r from-ligaPrimary to-ligaSecondary blur-[60px] opacity-20 group-hover:opacity-40 transition-opacity"></div><div className="glass-panel p-6 rounded-3xl border-t border-white/10 transform rotate-[-3deg] group-hover:rotate-0 transition-all duration-500 md:translate-x-12"><div className="flex items-center gap-4 mb-4 border-b border-white/10 pb-4"><div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-600 flex items-center justify-center font-bold text-black border-2 border-yellow-200">#1</div><div><div className="text-sm text-gray-400">Líder Actual</div><div className="font-bold text-xl">Tu Nombre Aquí</div></div></div><div className="space-y-3 opacity-50"><div className="h-4 bg-white/20 rounded w-3/4"></div><div className="h-4 bg-white/20 rounded w-full"></div></div></div></div></section><div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0f] to-[#050507]"></div>
+                    </div>
+
+                    {/* Calendar */}
+                    <section className="py-20 px-4 md:px-8 max-w-5xl mx-auto w-full">
+                        <div className="glass-panel p-8 rounded-[2.5rem]">
+                            <div className="flex justify-between items-center mb-8"><h2 className="text-3xl font-bold uppercase tracking-widest text-celestial">{monthData.name} <span className="text-white/30">{currentYear}</span></h2><div className="flex gap-2"><button onClick={() => { if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); } else { setCurrentMonth(currentMonth - 1); } }} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"><ChevronLeft className="w-6 h-6" /></button><button onClick={() => { if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1); } else { setCurrentMonth(currentMonth + 1); } }} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"><ChevronRight className="w-6 h-6" /></button></div></div>
+                            <div className="grid grid-cols-7 gap-2 md:gap-4 text-center">
+                                {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => <div key={d} className="font-bold text-gray-500 py-2">{d}</div>)}
+                                {monthData.days.map((d, i) => {
+                                    if (!d) return <div key={i}></div>;
+                                    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                    const dayEvents = events.filter(e => e.date === dateStr);
+                                    const holiday = HOLIDAYS.find(h => h.date === dateStr);
+                                    const isWeekend = [0, 6].includes(new Date(currentYear, currentMonth, d).getDay());
+                                    // NEW: Icons overlay at top-right
+                                    const uniqueIcons = [...new Set(dayEvents.map(e => e.typeIcon))].slice(0, 3);
+                                    return (
+                                        <div key={i} onClick={() => setSelectedDay({ date: dateStr, events: dayEvents, holiday })} className={`aspect-square flex flex-col justify-between p-1 rounded-xl text-lg font-bold relative cursor-pointer border border-transparent ${holiday ? 'bg-red-500/10 text-red-400 border-red-500/20' : isWeekend ? 'bg-blue-500/10 text-blue-300' : 'hover:bg-white/5 text-gray-300'}`}>
+                                            <div className="self-center">{d}</div>
+                                            <div className="absolute top-1 right-1 flex gap-0.5">{uniqueIcons.map((ic, ix) => <span key={ix} className="text-[10px] leading-none">{ic}</span>)}</div>
+                                            <div className="flex flex-col gap-0.5 w-full">
+                                                {holiday && <div className="text-[8px] bg-red-500/20 text-red-300 px-1 rounded truncate leading-tight hidden md:block">{holiday.name}</div>}
+                                                {dayEvents.slice(0, 3).map((evt, idx) => (
+                                                    <div key={idx} className="h-4 md:h-auto text-[8px] md:text-[10px] px-1 rounded truncate text-black leading-tight flex items-center" style={{ backgroundColor: evt.typeColor }} title={evt.title}>
+                                                        {evt.title}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer className="mt-auto py-12 border-t border-white/5 bg-[#050507]"><div className="flex flex-col items-center gap-8"><div className="flex gap-6"><a href="https://www.instagram.com/pasoecuadorinef26/" target="_blank" className="p-4 bg-white/5 rounded-full hover:bg-gradient-to-br hover:from-purple-600 hover:to-orange-500 transition-all hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg></a><a href="https://www.tiktok.com/@pasoecuadorinef26" target="_blank" className="p-4 bg-white/5 rounded-full hover:bg-black hover:border hover:border-celestial hover:text-celestial transition-all hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg></a></div><div className="text-gray-600 text-sm">© 2025 Paso de Ecuador INEF 25/26</div></div></footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+    </script>
+</body>
+
+</html>
