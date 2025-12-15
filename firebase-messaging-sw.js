@@ -18,32 +18,34 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Customize notification here
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/logo.png',
-        data: payload.data // Pass data payload to the notification
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // [DUPLICATE FIX] We disable manual display because the browser already shows the 'notification' payload automatically.
+    // This prevents seeing double notifications (one from System, one from this script).
+    // const notificationTitle = payload.notification.title;
+    // const notificationOptions = {
+    //     body: payload.notification.body,
+    //     icon: './logo.png',
+    //     data: payload.data // Pass data payload to the notification
+    // };
+    // self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 self.addEventListener('notificationclick', function (event) {
     console.log('[firebase-messaging-sw.js] Notification click received.');
     event.notification.close();
 
-    // Fix for 404 on GitHub Pages: Use registration.scope to get the correct base URL
-    // e.g., https://braisrd.github.io/Paso-Ecuador-INEF/
-    // Checks for a 'url' field in the data payload for deep linking
-    let urlToOpen = (event.notification.data && event.notification.data.url) ? event.notification.data.url : self.registration.scope;
+    // [404 FIX] Hardcoded base URL to ensure we never hit the root domain error on GitHub Pages.
+    const FIXED_SCOPE = 'https://braisrd.github.io/Paso-Ecuador-INEF/';
+
+    // Check key 'url' in data, or use the fixed scope.
+    let urlToOpen = (event.notification.data && event.notification.data.url) ? event.notification.data.url : FIXED_SCOPE;
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windowClients) {
             // Check if there is already a window/tab open with the target URL
             for (let i = 0; i < windowClients.length; i++) {
                 const client = windowClients[i];
-                if (client.url.startsWith(urlToOpen) && 'focus' in client) {
+                // URL matching: flexible to allow sub-paths
+                if (client.url.includes("Paso-Ecuador-INEF") && 'focus' in client) {
                     return client.focus();
                 }
             }
