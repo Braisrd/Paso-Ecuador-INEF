@@ -28,6 +28,32 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+self.addEventListener('notificationclick', function (event) {
+    console.log('[firebase-messaging-sw.js] Notification click received.');
+    event.notification.close();
+
+    // Fix for 404 on GitHub Pages: Use registration.scope to get the correct base URL
+    // e.g., https://braisrd.github.io/Paso-Ecuador-INEF/
+    let urlToOpen = self.registration.scope;
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windowClients) {
+            // Check if there is already a window/tab open with the target URL
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.startsWith(urlToOpen) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // If not, open a new window
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
+});
+
+
 // --- PWA Caching Logic (Merged from service-worker.js) ---
 const CACHE_NAME = 'paso-ecuador-v5'; // Bumped version
 const ASSETS_TO_CACHE = [
