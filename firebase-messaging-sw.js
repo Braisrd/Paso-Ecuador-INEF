@@ -22,7 +22,8 @@ messaging.onBackgroundMessage((payload) => {
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
-        icon: '/logo.png'
+        icon: '/logo.png',
+        data: payload.data // Pass data payload to the notification
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -34,7 +35,8 @@ self.addEventListener('notificationclick', function (event) {
 
     // Fix for 404 on GitHub Pages: Use registration.scope to get the correct base URL
     // e.g., https://braisrd.github.io/Paso-Ecuador-INEF/
-    let urlToOpen = self.registration.scope;
+    // Checks for a 'url' field in the data payload for deep linking
+    let urlToOpen = (event.notification.data && event.notification.data.url) ? event.notification.data.url : self.registration.scope;
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windowClients) {
