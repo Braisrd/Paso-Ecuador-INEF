@@ -13,37 +13,43 @@ firebase.initializeApp({
     measurementId: "G-TPNXY1LNX9"
 });
 
+// Force immediate activation of the new Service Worker to replace old cached versions
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+});
+
 // Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Customize notification here
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/logo.png',
-        data: payload.data // Pass data payload to the notification
-    };
+    // Browser automatically shows notification if 'notification' key is present.
+    // We do NOT need to show it manually again, avoiding duplicates.
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // If you wanted to handle data-only messages, you would do it here.
+    // const title = payload.notification?.title || 'Nuevo Mensaje';
+    // const options = { body: payload.notification?.body, icon: '/logo.png' };
+    // self.registration.showNotification(title, options);
 });
 
 self.addEventListener('notificationclick', function (event) {
     console.log('[firebase-messaging-sw.js] Notification click received.');
     event.notification.close();
 
-    // Fix for 404 on GitHub Pages: Use registration.scope to get the correct base URL
-    // e.g., https://braisrd.github.io/Paso-Ecuador-INEF/
-    // Checks for a 'url' field in the data payload for deep linking
-    let urlToOpen = (event.notification.data && event.notification.data.url) ? event.notification.data.url : self.registration.scope;
+    // Fix for 404: Explicitly define the GitHub Pages subdirectory root
+    const PROJECT_ROOT = 'https://braisrd.github.io/Paso-Ecuador-INEF/';
+    let urlToOpen = (event.notification.data && event.notification.data.url) ? event.notification.data.url : PROJECT_ROOT;
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windowClients) {
             // Check if there is already a window/tab open with the target URL
             for (let i = 0; i < windowClients.length; i++) {
                 const client = windowClients[i];
-                // URL matching: flexible to allow sub-paths
+                // Match broadly to the project path
                 if (client.url.includes("Paso-Ecuador-INEF") && 'focus' in client) {
                     return client.focus();
                 }
