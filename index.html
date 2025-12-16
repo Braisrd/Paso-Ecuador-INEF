@@ -52,12 +52,13 @@
             // Old registration removed
         }
 
-        // Handle foreground messages
+        // Handle foreground messages - REMOVED to avoid ReferenceError on mobile
+        // Toast logic is handled inside React App component
+        /*
         onMessage(messaging, (payload) => {
             console.log('Message received. ', payload);
-            const { title, body, icon } = payload.notification;
-            new Notification(title, { body, icon: './logo.png' });
         });
+        */
     </script>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@300;500;700;900&display=swap"
@@ -135,7 +136,11 @@
         // Global Subscribe Function
         window.subscribeUser = async (silent = false) => {
             try {
-                if (!silent) alert('Activa las notificaciones para estar al tanto de los eventos, torneos y avisos importantes del Paso. ¡No te pierdas nada!');
+                if (!silent) window.showToast('Consejo', 'Activa las notificaciones para estar al tanto de los eventos.');
+                if (!('Notification' in window)) {
+                    console.error("This browser does not support desktop notification");
+                    return false;
+                }
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
                     const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
@@ -146,25 +151,49 @@
 
                     if (token) {
                         console.log('Token:', token);
-                        // Save to Firestore
                         const tokenRef = window.doc(window.db, "fcm_tokens", token);
                         await window.setDoc(tokenRef, {
                             token: token,
                             date: new Date().toISOString(),
                             userAgent: navigator.userAgent
                         });
-                        if (!silent) alert('¡Genial! Has activado los avisos para no perderte nada del Paso.');
+                        if (!silent) window.showToast('✅ Suscrito', '¡Genial! Has activado los avisos.');
                         return true;
                     }
                 } else {
-                    if (!silent) alert('Has bloqueado las notificaciones. Actívalas en la configuración del navegador.');
+                    if (!silent) window.showToast('⚠️ Bloqueado', 'Has bloqueado las notificaciones en el navegador.');
                 }
             } catch (e) {
                 console.error(e);
-                if (!silent) alert('Error al suscribir: ' + e.message);
+                if (!silent) window.showToast('❌ Error', 'Error al suscribir: ' + e.message);
             }
             return false;
         };
+
+        window.autoSubscribe = () => window.subscribeUser(true);
+
+        // GLOBAL TOAST HELPER
+        window.showToast = (title, body, duration = 4000) => {
+            const container = document.getElementById('toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = 'bg-[#13131f] border border-celestial text-white px-6 py-4 rounded-xl shadow-2xl animate-fade-in-up flex items-center gap-4 mb-4 backdrop-blur-md max-w-sm pointer-events-auto';
+            toast.innerHTML = `<div class="text-2xl">🔔</div><div><div class="font-bold text-celestial">${title}</div><div class="text-sm text-gray-300">${body}</div></div>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        };
+
+        function createToastContainer() {
+            const div = document.createElement('div');
+            div.id = 'toast-container';
+            div.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;';
+            document.body.appendChild(div);
+            return div;
+        }
     </script>
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef, Fragment } = React;
@@ -189,7 +218,50 @@
         const X = (p) => <Icon {...p} d={<Fragment><path d="M18 6 6 18" /><path d="m6 6 12 12" /></Fragment>} />;
         const Bell = (p) => <Icon {...p} d={<Fragment><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Fragment>} />;
 
-        const compressImage = async (file) => { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = (event) => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; const MAX_WIDTH = 1200; const MAX_HEIGHT = 1200; if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }; reader.onerror = error => reject(error); }); };
+        const compressImage = async (file) => {
+            return new Promise((resolve, reject) => {
+                const MAX_WIDTH = 1200;
+                const MAX_HEIGHT = 1200;
+                const QUALITY = 0.7;
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        try {
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            // Cleanup
+                            resolve(canvas.toDataURL('image/jpeg', QUALITY));
+                        } catch (e) {
+                            reject(e);
+                        }
+                    };
+                    img.onerror = (e) => reject(new Error("Error loading image"));
+                };
+                reader.onerror = error => reject(error);
+            });
+        };
 
         const usePWAInstall = () => {
             const [installPrompt, setInstallPrompt] = useState(null);
@@ -235,7 +307,7 @@
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={onClose}>
                     <div className={`bg-[#13131f] border border-white/10 rounded-2xl w-full ${sizeClass} my-8 max-h-[90vh] overflow-y-auto relative shadow-2xl`} onClick={e => e.stopPropagation()}>
-                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10 p-2 bg-black/20 rounded-full hover:bg-black/50 transition-colors"><X className="w-5 h-5" /></button>
+                        <button onClick={onClose} aria-label="Cerrar" className="absolute top-4 right-4 text-gray-400 hover:text-white z-10 p-2 bg-black/20 rounded-full hover:bg-black/50 transition-colors"><X className="w-5 h-5" /></button>
                         {children}
                     </div>
                 </div>
@@ -263,14 +335,46 @@
             const [pollVote, setPollVote] = useState(() => localStorage.getItem(`poll_vote_${event.id}`));
             const handleSurveyClick = async (e) => {
                 e.preventDefault(); e.stopPropagation(); if (loading) return; setLoading(true); const isVoted = voted; setVoted(!isVoted);
-                try { if (isVoted) { if (confirm('¿Retirar tu voto?')) { await window.updateDoc(window.doc(window.db, "events", event.id), { surveyCount: Math.max(0, (event.surveyCount || 0) - 1) }); localStorage.removeItem(`voted_${event.id}`); } else { setVoted(true); } } else { await window.updateDoc(window.doc(window.db, "events", event.id), { surveyCount: (event.surveyCount || 0) + 1 }); localStorage.setItem(`voted_${event.id}`, 'true'); alert('Has confirmado tu asistencia.'); } } catch (err) { alert('Error de conexión'); setVoted(isVoted); } finally { setTimeout(() => setLoading(false), 500); }
+                try {
+                    if (isVoted) {
+                        if (confirm('¿Retirar tu voto?')) {
+                            await window.updateDoc(window.doc(window.db, "events", event.id), { surveyCount: Math.max(0, (event.surveyCount || 0) - 1) });
+                            localStorage.removeItem(`voted_${event.id}`);
+                        } else {
+                            setVoted(true);
+                        }
+                    } else {
+                        await window.updateDoc(window.doc(window.db, "events", event.id), { surveyCount: (event.surveyCount || 0) + 1 });
+                        localStorage.setItem(`voted_${event.id}`, 'true');
+                        window.showToast('📢 Asistencia', 'Has confirmado tu asistencia.');
+                    }
+                } catch (err) {
+                    window.showToast('❌ Error', 'Error de conexión');
+                    setVoted(isVoted);
+                } finally {
+                    setTimeout(() => setLoading(false), 500);
+                }
             };
             const handlePollVote = async (opt) => {
                 if (loading) return; setLoading(true); const key = `poll_vote_${event.id}`; const current = localStorage.getItem(key); const counts = { ...(event.pollCounts || {}) };
                 try {
-                    if (current === opt) { counts[opt] = Math.max(0, (counts[opt] || 0) - 1); await window.updateDoc(window.doc(window.db, "events", event.id), { pollCounts: counts }); localStorage.removeItem(key); setPollVote(null); }
-                    else { if (current) counts[current] = Math.max(0, (counts[current] || 0) - 1); counts[opt] = (counts[opt] || 0) + 1; await window.updateDoc(window.doc(window.db, "events", event.id), { pollCounts: counts }); localStorage.setItem(key, opt); setPollVote(opt); }
-                } catch (e) { alert('Error'); } finally { setLoading(false); }
+                    if (current === opt) {
+                        counts[opt] = Math.max(0, (counts[opt] || 0) - 1);
+                        await window.updateDoc(window.doc(window.db, "events", event.id), { pollCounts: counts });
+                        localStorage.removeItem(key);
+                        setPollVote(null);
+                    } else {
+                        if (current) counts[current] = Math.max(0, (counts[current] || 0) - 1);
+                        counts[opt] = (counts[opt] || 0) + 1;
+                        await window.updateDoc(window.doc(window.db, "events", event.id), { pollCounts: counts });
+                        localStorage.setItem(key, opt);
+                        setPollVote(opt);
+                    }
+                } catch (e) {
+                    window.showToast('❌ Error', 'Error al votar');
+                } finally {
+                    setLoading(false);
+                }
             };
             const cls = "mt-4 w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg";
             if (event.actionType === 'link') return <a href={event.actionLink} target="_blank" onClick={e => e.stopPropagation()} className={`${cls} bg-white/5 border border-white/10 hover:bg-white/10 text-white`}><ExternalLink className="w-5 h-5" /> {event.actionLabel || 'Ver Más'}</a>;
@@ -289,7 +393,7 @@
                     <div className="flex justify-between items-center"><label className="text-sm font-bold text-gray-400">Botones de Acción</label><button type="button" onClick={addBtn} className="text-xs bg-celestial text-black px-2 py-1 rounded font-bold">+ Añadir</button></div>
                     {(buttons || []).map(b => (
                         <div key={b.id} className="bg-white/5 p-2 rounded relative">
-                            <button type="button" onClick={() => removeBtn(b.id)} className="absolute top-2 right-2 text-red-500"><X className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => removeBtn(b.id)} aria-label="Eliminar botón" className="absolute top-2 right-2 text-red-500"><X className="w-4 h-4" /></button>
                             <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
                                 <input value={b.label} onChange={e => updateBtn(b.id, 'label', e.target.value)} placeholder="Texto del Botón" className="bg-black/40 p-2 rounded text-sm w-full" />
                                 <select value={b.type || 'link'} onChange={e => updateBtn(b.id, 'type', e.target.value)} className="bg-black/40 p-2 rounded text-sm w-full"><option value="link">Enlace</option><option value="form">Formulario</option></select>
@@ -347,7 +451,7 @@
             );
         };
 
-        const AdminDashboard = ({ isOpen, onClose, events, eventTypes, announcements, onSaveEvent, onDeleteEvent, onAddEventType, onDeleteEventType, specialSections, onUpdateSpecialSections, onOpenDB }) => {
+        const AdminDashboard = ({ isOpen, onClose, events, eventTypes, announcements, onSaveEvent, onDeleteEvent, onAddEventType, onDeleteEventType, specialSections, onUpdateSpecialSections, onOpenDB, onOpenStats }) => {
             const [tab, setTab] = useState('events');
             const INITIAL_FORM = { title: '', date: '', time: '', location: '', typeId: 'party', description: '', imageUrl: '', actionType: 'none', actionLabel: '', actionLink: '', customFields: [], showSurveyCount: false, pollOptions: [] };
             const [formData, setFormData] = useState(INITIAL_FORM);
@@ -806,7 +910,7 @@
             const [showInbox, setShowInbox] = useState(false);
             const [announcements, setAnnouncements] = useState([]);
             const [hasUnread, setHasUnread] = useState(false);
-            const [permission, setPermission] = useState(Notification.permission);
+            const [permission, setPermission] = useState(('Notification' in window) ? Notification.permission : 'default');
 
             const toggleInbox = () => {
                 setShowInbox(!showInbox);
@@ -818,6 +922,10 @@
 
             const requestPermission = async () => {
                 try {
+                    if (!('Notification' in window)) {
+                        alert("Tu navegador no soporta notificaciones.");
+                        return;
+                    }
                     const perm = await Notification.requestPermission();
                     setPermission(perm);
                     if (perm === 'granted') {
@@ -899,7 +1007,7 @@
                     {regFormEvent && <EventRegistrationModal event={regFormEvent} onClose={() => setRegFormEvent(null)} />}
                     {statsEvent && <EventStatsModal event={statsEvent} onClose={() => setStatsEvent(null)} />}
                     {showLogin && <AdminLogin onClose={() => setShowLogin(false)} onSuccess={() => { setIsAdmin(true); setShowLogin(false); setShowAdminPanel(true); }} />}
-                    {showAdminPanel && <AdminDashboard isOpen={true} onClose={() => setShowAdminPanel(false)} events={events} eventTypes={eventTypes} announcements={announcements} onOpenDB={() => { setShowAdminPanel(false); setView('database'); }} onSaveEvent={async (data, id) => { const et = eventTypes.find(t => t.id === data.typeId); const ed = { ...data, typeColor: et?.color || '#38bdf8', typeIcon: et?.icon || '📌', typeName: et?.name || 'Evento' }; if (id) await window.updateDoc(window.doc(window.db, "events", id), ed); else await window.addDoc(window.collection(window.db, "events"), { ...ed, surveyCount: 0 }); alert('Guardado'); }} onDeleteEvent={id => confirm('¿Eliminar?') && window.deleteDoc(window.doc(window.db, "events", id))} onAddEventType={t => { const u = [...eventTypes, t]; setEventTypes(u); window.setDoc(window.doc(window.db, "config", "eventTypes"), { types: u }) }} onDeleteEventType={id => { const u = eventTypes.filter(t => t.id !== id); setEventTypes(u); window.setDoc(window.doc(window.db, "config", "eventTypes"), { types: u }) }} specialSections={specialSections} onUpdateSpecialSections={setSpecialSections} />}
+                    {showAdminPanel && <AdminDashboard isOpen={true} onClose={() => setShowAdminPanel(false)} events={events} eventTypes={eventTypes} announcements={announcements} onOpenDB={() => { setShowAdminPanel(false); setView('database'); }} onSaveEvent={async (data, id) => { const et = eventTypes.find(t => t.id === data.typeId); const ed = { ...data, typeColor: et?.color || '#38bdf8', typeIcon: et?.icon || '📌', typeName: et?.name || 'Evento' }; if (id) await window.updateDoc(window.doc(window.db, "events", id), ed); else await window.addDoc(window.collection(window.db, "events"), { ...ed, surveyCount: 0 }); alert('Guardado'); }} onDeleteEvent={id => confirm('¿Eliminar?') && window.deleteDoc(window.doc(window.db, "events", id))} onAddEventType={t => { const u = [...eventTypes, t]; setEventTypes(u); window.setDoc(window.doc(window.db, "config", "eventTypes"), { types: u }) }} onDeleteEventType={id => { const u = eventTypes.filter(t => t.id !== id); setEventTypes(u); window.setDoc(window.doc(window.db, "config", "eventTypes"), { types: u }) }} specialSections={specialSections} onUpdateSpecialSections={setSpecialSections} onOpenStats={setStatsEvent} />}
                     {showAdminPanel && <div className="fixed top-0 left-0 hidden"></div> /* Hack to access stats inside dashboard context if needed, but we pass setStatsEvent via props currently? No, we need to modify AdminDashboard to accept onOpenStats */}
 
                     <div className="fixed top-4 right-4 z-50 flex gap-2">
