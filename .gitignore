@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+dist/
+.vite/
+
+# Backups and History (Keeping them local, but out of GitHub)
+_MASTER_BACKUP_HISTORY/
+_FULL_BACKUP_BEFORE_REORG/
+_archive/
+_backup_*/
+_unused_scaffold/
+
+# Misc
+.DS_Store
+*.local
