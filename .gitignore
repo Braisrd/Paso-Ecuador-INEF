@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
-dist/
+# Dependencies
+node_modules/
 .vite/
 
 # Backups and History (Keeping them local, but out of GitHub)
