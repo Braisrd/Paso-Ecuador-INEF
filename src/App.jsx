@@ -6,7 +6,7 @@ import { Header, ScrollToTop } from './components/Layout';
 
 function App() {
     return (
-        <Router>
+        <Router basename="/Paso-Ecuador-INEF/">
             <ScrollToTop />
             <div className="min-h-screen">
                 <Routes>
