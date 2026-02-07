@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if the user is the specific admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'braisrd11@gmail.com';
+    }
+
+    // Publicly readable content managed by admin
+    match /events/{event} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /config/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /announcements/{announcement} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Registrations: Everyone can write (to register), only admin can read all
+    match /registrations/{registration} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    
+    // Liga data
+    match /players/{player} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /tournaments/{tournament} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Liga results (legacy or future)
+    match /results/{result} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
