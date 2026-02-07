@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
@@ -27,9 +27,9 @@ export const Header = () => {
 };
 
 export const ScrollToTop = () => {
-    const { pathname } = React.useMemo(() => window.location, [window.location.pathname]);
+    const { pathname } = useLocation();
 
-    React.useEffect(() => {
+    useEffect(() => {
         window.scrollTo(0, 0);
     }, [pathname]);
 
