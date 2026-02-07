@@ -149,7 +149,7 @@ const Home = () => {
             <section className="min-h-[90vh] flex flex-col items-center justify-center p-6 relative overflow-hidden bg-celestial">
                 <div className="absolute inset-0 bg-sky-400/5 blur-[120px] pointer-events-none"></div>
                 <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 animate-float">
-                    <img src="/logo.png" className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(56,189,248,0.5)]" alt="Logo" />
+                    <img src={`${import.meta.env.BASE_URL}logo.png`} className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(56,189,248,0.5)]" alt="Logo" />
                 </div>
                 <h1 className="text-6xl md:text-9xl font-black text-center tracking-tighter mb-4">
                     <span className="text-white">PASO DE </span>
