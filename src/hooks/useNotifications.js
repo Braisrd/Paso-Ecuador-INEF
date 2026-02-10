@@ -16,26 +16,44 @@ export const useNotifications = () => {
             setPermission(result);
 
             if (result === 'granted') {
+                console.log('Permission granted. retrieving token...');
+
+                let registration;
+                try {
+                    registration = await navigator.serviceWorker.ready;
+                    console.log('Service Worker ready:', registration);
+                } catch (e) {
+                    console.error('Error waiting for SW ready:', e);
+                }
+
                 // Get Token
-                // TODO: Replace with user's VAPID key from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push Certificates
                 const currentToken = await getToken(messaging, {
-                    vapidKey: "BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M"
+                    vapidKey: "BJZr34oV68SKsSBbxY-rB7xzbcKQ4DjIIsgtW-y8SW5I-4dGHIpeHsmIo7mQEMMXNK8ov5RqMRKw7-IWD1_Oa4M",
+                    serviceWorkerRegistration: registration
                 });
 
                 if (currentToken) {
+                    console.log('Token retrieved:', currentToken);
                     setFcmToken(currentToken);
                     // Save token to Firestore for targeting
-                    await setDoc(doc(db, "fcm_tokens", currentToken), {
-                        token: currentToken,
-                        lastSeen: new Date(),
-                        userAgent: navigator.userAgent
-                    }, { merge: true });
+                    try {
+                        await setDoc(doc(db, "fcm_tokens", currentToken), {
+                            token: currentToken,
+                            lastSeen: new Date(),
+                            userAgent: navigator.userAgent
+                        }, { merge: true });
+                        console.log('Token saved to Firestore');
+                    } catch (dbError) {
+                        console.error('Error saving to DB:', dbError);
+                        alert('Error guardando token: ' + dbError.message);
+                    }
                 } else {
                     console.log('No registration token available. Request permission to generate one.');
                 }
             }
         } catch (error) {
             console.error("An error occurred while retrieving token. ", error);
+            alert("Error token: " + error.message);
         }
     };
 
