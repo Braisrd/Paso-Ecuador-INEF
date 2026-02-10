@@ -39,6 +39,7 @@ import AdminLogin from '../components/Admin/AdminLogin';
 import DatabaseView from '../components/Admin/DatabaseView';
 
 import { usePWAInstall } from '../hooks/usePWA';
+import { useNotifications } from '../hooks/useNotifications';
 
 const Home = () => {
     // Data State
@@ -63,6 +64,7 @@ const Home = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
     const { showInstall, isIOS, install, setShowInstall } = usePWAInstall();
+    const { permission, requestPermission } = useNotifications();
 
     // Firebase Data Sync
     useEffect(() => {
@@ -404,8 +406,8 @@ const Home = () => {
                 isOpen={showInbox}
                 onClose={() => setShowInbox(false)}
                 announcements={announcements}
-                permission="default"
-                onRequestPermission={() => alert('Próximamente...')}
+                permission={permission}
+                onRequestPermission={requestPermission}
             />
 
             {/* Admin Login */}
