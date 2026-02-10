@@ -382,20 +382,39 @@ const AdminDashboard = ({
                                 </div>
                             </div>
 
-                            {fcmToken && (
-                                <div className="bg-white/5 p-6 rounded-2xl border border-white/5 flex items-center justify-between mt-6">
-                                    <div>
-                                        <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-1">Tu Token de Dispositivo</h4>
-                                        <p className="font-mono text-[10px] text-gray-400 truncate max-w-[200px]">{fcmToken}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => { navigator.clipboard.writeText(fcmToken); alert('Token copiado'); }}
-                                        className="bg-white/10 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-white/20 transition-all"
-                                    >
-                                        COPIAR
-                                    </button>
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5 mt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest">
+                                        Estado Notificaciones
+                                    </h4>
+                                    <span className={`text-[10px] px-2 py-1 rounded border ${fcmToken ? 'bg-green-500/10 border-green-500 text-green-500' : 'bg-red-500/10 border-red-500 text-red-500'}`}>
+                                        {fcmToken ? 'ACTIVO' : 'SIN TOKEN'}
+                                    </span>
                                 </div>
-                            )}
+
+                                {fcmToken ? (
+                                    <div className="flex items-center justify-between gap-4">
+                                        <p className="font-mono text-[10px] text-gray-400 truncate flex-1 bg-black/30 p-2 rounded">
+                                            {fcmToken}
+                                        </p>
+                                        <button
+                                            onClick={() => { navigator.clipboard.writeText(fcmToken); alert('Token copiado'); }}
+                                            className="bg-white/10 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-white/20 transition-all shrink-0"
+                                        >
+                                            COPIAR
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="text-[10px] text-gray-500">
+                                        <p>No se ha generado token. Posibles causas:</p>
+                                        <ul className="list-disc ml-4 mt-1 space-y-1">
+                                            <li>No has aceptado permisos (Icono candado 🔒).</li>
+                                            <li>Estás en modo incógnito.</li>
+                                            <li>Problema de conexión con Firebase.</li>
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="space-y-3">
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Historial Reciente</h3>
