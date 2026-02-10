@@ -357,9 +357,28 @@ const AdminDashboard = ({
                                 <p className="text-xs text-gray-400 leading-relaxed mb-4">
                                     Este panel añade mensajes al Buzón interno de la App. Para enviar notificaciones que hagan vibrar el móvil (Push), utiliza el panel de Firebase Messaging.
                                 </p>
-                                <a href="https://console.firebase.google.com/" target="_blank" className="text-[10px] bg-yellow-500/20 text-yellow-200 px-4 py-2 rounded-lg hover:bg-yellow-500/30 font-bold transition-all uppercase tracking-tighter">
-                                    Ir a Consola Firebase
-                                </a>
+                                <div className="flex flex-wrap gap-2">
+                                    <a href="https://console.firebase.google.com/" target="_blank" className="text-[10px] bg-yellow-500/20 text-yellow-200 px-4 py-2 rounded-lg hover:bg-yellow-500/30 font-bold transition-all uppercase tracking-tighter">
+                                        Ir a Consola Firebase
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const title = document.querySelector('input[name="title"]').value;
+                                            const body = document.querySelector('textarea[name="body"]').value;
+                                            if (!title || !body) {
+                                                alert('Escribe algo primero.');
+                                                return;
+                                            }
+                                            navigator.clipboard.writeText(`Título: ${title}\nTexto: ${body}`);
+                                            alert('Copiado al portapapeles. ¡Ahora ve a Firebase y pégalo!');
+                                            window.open('https://console.firebase.google.com/u/0/project/liga-multisport/notification/compose', '_blank');
+                                        }}
+                                        className="text-[10px] bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 font-bold transition-all uppercase tracking-tighter"
+                                    >
+                                        COPIAR DATOS
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-3">
@@ -380,8 +399,8 @@ const AdminDashboard = ({
                         </div>
                     )}
                 </div>
-            </div>
-        </Modal>
+            </div >
+        </Modal >
     );
 };
 
