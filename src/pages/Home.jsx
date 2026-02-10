@@ -64,7 +64,7 @@ const Home = () => {
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
     const { showInstall, isIOS, install, setShowInstall } = usePWAInstall();
-    const { permission, requestPermission } = useNotifications();
+    const { permission, requestPermission, fcmToken } = useNotifications();
 
     // Firebase Data Sync
     useEffect(() => {
@@ -430,6 +430,7 @@ const Home = () => {
                 specialSections={specialSections}
                 onOpenDB={() => { setShowAdminPanel(false); setView('database'); }}
                 onOpenStats={handleOpenStats}
+                fcmToken={fcmToken}
             />
 
             {/* Install Prompt Overlay (Mobile) */}

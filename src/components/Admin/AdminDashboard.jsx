@@ -34,7 +34,8 @@ const AdminDashboard = ({
     announcements,
     specialSections,
     onOpenDB,
-    onOpenStats
+    onOpenStats,
+    fcmToken
 }) => {
     const [tab, setTab] = useState('events');
     const INITIAL_EVENT_FORM = {
@@ -380,6 +381,21 @@ const AdminDashboard = ({
                                     </button>
                                 </div>
                             </div>
+
+                            {fcmToken && (
+                                <div className="bg-white/5 p-6 rounded-2xl border border-white/5 flex items-center justify-between mt-6">
+                                    <div>
+                                        <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-1">Tu Token de Dispositivo</h4>
+                                        <p className="font-mono text-[10px] text-gray-400 truncate max-w-[200px]">{fcmToken}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => { navigator.clipboard.writeText(fcmToken); alert('Token copiado'); }}
+                                        className="bg-white/10 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-white/20 transition-all"
+                                    >
+                                        COPIAR
+                                    </button>
+                                </div>
+                            )}
 
                             <div className="space-y-3">
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Historial Reciente</h3>

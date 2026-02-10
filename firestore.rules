@@ -29,6 +29,12 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
     
+    // NEW: Allow public write for FCM tokens (to receive notifications)
+    match /fcm_tokens/{token} {
+      allow read: if isAdmin();
+      allow write: if true; // Public can subscribe
+    }
+    
     // Liga data
     match /players/{player} {
       allow read: if true;
