@@ -32,6 +32,7 @@ import { ScrollToTop } from '../components/Layout';
 import EventDetailModal, { ActionButton } from '../components/Modals/EventDetailModal';
 import EventRegistrationModal from '../components/Modals/EventRegistrationModal';
 import { AnnouncementsModal, NotificationButton } from '../components/Modals/AnnouncementsModal';
+import InstallPrompt from '../components/Modals/InstallPrompt';
 
 // Admin Components
 import AdminDashboard from '../components/Admin/AdminDashboard';
@@ -63,7 +64,7 @@ const Home = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-    const { showInstall, isIOS, install, setShowInstall } = usePWAInstall();
+    const { showInstall, isIOS, install, dismiss, setShowInstall } = usePWAInstall();
     const { permission, requestPermission, fcmToken } = useNotifications();
 
     // Firebase Data Sync
@@ -453,23 +454,12 @@ const Home = () => {
             />
 
             {/* Install Prompt Overlay (Mobile) */}
-            {
-                showInstall && !isIOS && (
-                    <div className="fixed bottom-6 left-6 right-6 z-[100] animate-fade-in-up">
-                        <div className="bg-[#13131f] border border-sky-400/30 p-6 rounded-[2rem] shadow-2xl flex items-center gap-4 relative">
-                            <button onClick={() => setShowInstall(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
-                            <div className="w-14 h-14 bg-sky-400/10 rounded-2xl flex items-center justify-center text-3xl">📲</div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-white text-lg">Instalar App</h4>
-                                <p className="text-xs text-gray-400">Accede más rápido y sin conexión desde tu pantalla de inicio.</p>
-                            </div>
-                            <button onClick={install} className="bg-sky-400 text-black px-6 py-3 rounded-xl font-bold text-sm hover:scale-105 active:scale-95 transition-all">
-                                Instalar
-                            </button>
-                        </div>
-                    </div>
-                )
-            }
+            <InstallPrompt
+                isOpen={showInstall}
+                onClose={dismiss}
+                onInstall={install}
+                isIOS={isIOS}
+            />
         </div >
     );
 };
