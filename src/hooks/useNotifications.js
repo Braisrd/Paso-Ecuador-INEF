@@ -68,7 +68,8 @@ export const useNotifications = () => {
                 if (Notification.permission === 'granted') {
                     new Notification(payload.notification.title, {
                         body: payload.notification.body,
-                        icon: '/logo.png' // Ensure correct path
+                        icon: '/logo.png',
+                        tag: 'in-app-announcement' // Collapse multiple foreground messages
                     });
                 }
             });

@@ -101,6 +101,25 @@ const Home = () => {
         };
     }, []);
 
+    // Auto-prompt notifications for new users after delay
+    useEffect(() => {
+        if (permission === 'default') {
+            const timer = setTimeout(() => {
+                const lastPrompt = localStorage.getItem('last_notification_prompt');
+                const now = Date.now();
+                const oneDay = 24 * 60 * 60 * 1000;
+
+                if (!lastPrompt || (now - parseInt(lastPrompt)) > oneDay) {
+                    setShowInbox(true);
+                    localStorage.setItem('last_notification_prompt', now.toString());
+                    console.log('Smart Onboarding: Triggering notification prompt');
+                }
+            }, 10000); // 10 second delay
+
+            return () => clearTimeout(timer);
+        }
+    }, [permission]);
+
     const toggleInbox = () => {
         setShowInbox(true);
         setHasUnread(false);
