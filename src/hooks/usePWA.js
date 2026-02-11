@@ -28,10 +28,12 @@ export const usePWAInstall = () => {
         }
 
         const handler = (e) => {
+            console.log('PWA: beforeinstallprompt event fired');
             e.preventDefault();
             setDeferredPrompt(e);
 
             const dismissed = localStorage.getItem('pwa_prompt_dismissed');
+            console.log('PWA: dismissed from storage:', dismissed);
             if (!standalone && !dismissed) {
                 setShowInstall(true);
             }
