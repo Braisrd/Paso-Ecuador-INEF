@@ -12,17 +12,16 @@ function App() {
         return <BrowserWarning />;
     }
 
-    // Dynamic basename for GitHub Pages vs Firebase
-    // Dynamic basename for GitHub Pages vs Firebase
-    // 2025-02-19: Added URL param resilience.
+    // Senior Debugger: Robust basename calculation (Instruction 2)
     const getBasename = () => {
-        const host = window.location.host;
-        const pathname = window.location.pathname;
-
-        // Clean params if they exist in strict checking contexts (optional but safe)
-        // Check for GitHub Pages
-        if (host.includes('github.io')) {
-            return '/Paso-Ecuador-INEF/';
+        try {
+            const host = window.location.hostname;
+            // Strict check for GitHub Pages, ignoring any path-based confusion
+            if (host.includes('github.io')) {
+                return '/Paso-Ecuador-INEF';
+            }
+        } catch (e) {
+            console.error("Error detecting basename context:", e);
         }
         return '/';
     };
@@ -34,7 +33,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/liga" element={<Liga />} />
-                    <Route path="/fichajes" element={<TransferMarket />} />
+                    {/* Unfinished features hidden per user request */}
                 </Routes>
                 <Header />
             </div>

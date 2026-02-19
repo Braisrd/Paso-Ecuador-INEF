@@ -6,8 +6,11 @@ export const useNotifications = () => {
     const [fcmToken, setFcmToken] = useState(null);
 
     const requestPermission = async () => {
-        if (!messaging) {
-            console.warn("Messaging not supported or failed to initialize.");
+        // Intensive feature detection (Instruction 1)
+        const canNotificate = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+
+        if (!messaging || !canNotificate) {
+            console.warn("Messaging systems not available or supported.");
             return;
         }
 

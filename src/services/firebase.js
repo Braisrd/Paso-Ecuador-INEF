@@ -14,7 +14,7 @@ import {
     setDoc,
     where
 } from "firebase/firestore";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
@@ -31,25 +31,24 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// Defensive Messaging Initialization (Instruction 1)
 let messaging = null;
 
-const isSupported = () => {
-    return (
-        'serviceWorker' in navigator &&
-        'PushManager' in window &&
-        'Notification' in window
-    );
+const initializeMessaging = async () => {
+    try {
+        const supported = await isSupported();
+        if (supported && 'serviceWorker' in navigator && 'PushManager' in window) {
+            messaging = getMessaging(app);
+            console.log("Firebase Messaging initialized successfully.");
+        } else {
+            console.warn("Firebase Messaging not supported in this environment.");
+        }
+    } catch (e) {
+        console.error("Critical error during Messaging initialization:", e);
+    }
 };
 
-if (isSupported()) {
-    try {
-        messaging = getMessaging(app);
-    } catch (e) {
-        console.warn("Firebase Messaging could not be initialized:", e);
-    }
-} else {
-    console.warn("Firebase Messaging not supported in this browser/environment.");
-}
+initializeMessaging();
 
 export { messaging };
 

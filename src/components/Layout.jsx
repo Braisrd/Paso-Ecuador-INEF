@@ -20,6 +20,7 @@ export const Header = () => {
                 >
                     Liga
                 </Link>
+                {/* 
                 <div className="w-px h-4 bg-white/10"></div>
                 <Link
                     to="/fichajes"
@@ -27,6 +28,7 @@ export const Header = () => {
                 >
                     Fichajes
                 </Link>
+                */}
             </div>
         </nav>
     );
