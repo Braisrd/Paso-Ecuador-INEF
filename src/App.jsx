@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Liga from './pages/Liga';
-import TransferMarket from './pages/TransferMarket';
+// import TransferMarket from './pages/TransferMarket';
 import { Header, ScrollToTop } from './components/Layout';
 import { isInstagramBrowser } from './utils/browserDetection';
 import BrowserWarning from './components/BrowserWarning';

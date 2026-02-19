@@ -15,7 +15,23 @@ export default defineConfig({
     }),
   ],
   build: {
+    // Modern bundle also needs to be safe for slightly older browsers
     target: ['es2015', 'safari11', 'ios11'],
-    cssTarget: ['chrome61', 'firefox60', 'safari11', 'edge18'],
+    cssTarget: 'safari11',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        pure_funcs: ['console.info', 'console.debug']
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          firebase: ['firebase/app', 'firebase/firestore', 'firebase/storage', 'firebase/messaging'],
+          vendor: ['react', 'react-dom', 'react-router-dom', 'lucide-react']
+        }
+      }
+    }
   },
 })
