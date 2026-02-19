@@ -15,7 +15,7 @@ function App() {
     return (
         <Router basename="/">
             <ScrollToTop />
-            <div className="min-h-[100dvh]">
+            <div className="min-h-[100dvh] w-full">
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/liga" element={<Liga />} />

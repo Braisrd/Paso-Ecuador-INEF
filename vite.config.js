@@ -9,4 +9,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    target: ['es2015', 'safari11', 'ios11'],
+    cssTarget: ['chrome61', 'firefox60', 'safari11', 'edge18'],
+  },
 })
