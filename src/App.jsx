@@ -12,8 +12,16 @@ function App() {
         return <BrowserWarning />;
     }
 
+    // Dynamic basename for GitHub Pages vs Firebase
+    const getBasename = () => {
+        if (window.location.host.includes('github.io')) {
+            return '/Paso-Ecuador-INEF/';
+        }
+        return '/';
+    };
+
     return (
-        <Router basename="/">
+        <Router basename={getBasename()}>
             <ScrollToTop />
             <div className="min-h-[100dvh] w-full">
                 <Routes>
