@@ -15,40 +15,40 @@ service cloud.firestore {
     
     match /config/{document} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Matches events logic for custom login
     }
     
     match /announcements/{announcement} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Matches events logic
     }
 
     // Registrations: Everyone can write (to register), only admin can read all
     match /registrations/{registration} {
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read, update, delete: if true; // Temporary for custom login
     }
     
     // NEW: Allow public write for FCM tokens (to receive notifications)
     match /fcm_tokens/{token} {
-      allow read: if isAdmin();
+      allow read: if true;
       allow write: if true; // Public can subscribe
     }
     
     // Liga data
     match /players/{player} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true;
     }
     match /tournaments/{tournament} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true;
     }
     
     // Liga results (legacy or future)
     match /results/{result} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true;
     }
     
     // Transfer Market

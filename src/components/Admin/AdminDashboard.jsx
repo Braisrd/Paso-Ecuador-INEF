@@ -119,7 +119,8 @@ const AdminDashboard = ({
             await setDoc(doc(db, 'config', 'specialSections'), { sections: localSpecialSections });
             alert('Secciones especiales guardadas con éxito');
         } catch (err) {
-            alert('Error al guardar las secciones');
+            console.error("Firestore Save Error:", err);
+            alert(`Error al guardar las secciones: ${err.message || 'Error desconocido'}`);
         }
     };
 
