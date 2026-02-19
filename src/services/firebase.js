@@ -32,11 +32,25 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 let messaging = null;
-try {
-    messaging = getMessaging(app);
-} catch (e) {
-    console.warn("Firebase Messaging could not be initialized:", e);
+
+const isSupported = () => {
+    return (
+        'serviceWorker' in navigator &&
+        'PushManager' in window &&
+        'Notification' in window
+    );
+};
+
+if (isSupported()) {
+    try {
+        messaging = getMessaging(app);
+    } catch (e) {
+        console.warn("Firebase Messaging could not be initialized:", e);
+    }
+} else {
+    console.warn("Firebase Messaging not supported in this browser/environment.");
 }
+
 export { messaging };
 
 // Export firestore functions for convenience

@@ -60,19 +60,23 @@ export const useNotifications = () => {
     // Listen for foreground messages
     useEffect(() => {
         if (permission === 'granted' && messaging) {
-            const unsubscribe = onMessage(messaging, (payload) => {
-                // Customize notification handling here if needed
-                console.log('Message received. ', payload);
-                // System notification for foreground if desired, or custom UI toast
-                // Using standard Notification API for consistency
-                if (Notification.permission === 'granted') {
-                    new Notification(payload.notification.title, {
-                        body: payload.notification.body,
-                        icon: '/logo.png'
-                    });
-                }
-            });
-            return () => unsubscribe();
+            try {
+                const unsubscribe = onMessage(messaging, (payload) => {
+                    // Customize notification handling here if needed
+                    console.log('Message received. ', payload);
+                    // System notification for foreground if desired, or custom UI toast
+                    // Using standard Notification API for consistency
+                    if (Notification.permission === 'granted') {
+                        new Notification(payload.notification.title, {
+                            body: payload.notification.body,
+                            icon: '/logo.png'
+                        });
+                    }
+                });
+                return () => unsubscribe();
+            } catch (err) {
+                console.warn("Error setting up onMessage listener:", err);
+            }
         }
     }, [permission]);
 

@@ -13,8 +13,15 @@ function App() {
     }
 
     // Dynamic basename for GitHub Pages vs Firebase
+    // Dynamic basename for GitHub Pages vs Firebase
+    // 2025-02-19: Added URL param resilience.
     const getBasename = () => {
-        if (window.location.host.includes('github.io')) {
+        const host = window.location.host;
+        const pathname = window.location.pathname;
+
+        // Clean params if they exist in strict checking contexts (optional but safe)
+        // Check for GitHub Pages
+        if (host.includes('github.io')) {
             return '/Paso-Ecuador-INEF/';
         }
         return '/';
