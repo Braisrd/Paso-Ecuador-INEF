@@ -15,6 +15,7 @@ import {
     where
 } from "firebase/firestore";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCmuNrhWE8Aw24_qUK23Qo4u_W5M6cAFN4",
@@ -28,6 +29,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 let messaging = null;
 try {
@@ -52,5 +54,8 @@ export {
     setDoc,
     where,
     getToken,
-    onMessage
+    onMessage,
+    ref,
+    uploadBytes,
+    getDownloadURL
 };

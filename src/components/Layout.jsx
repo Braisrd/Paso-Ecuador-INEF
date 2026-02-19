@@ -14,12 +14,18 @@ export const Header = () => {
                 >
                     Inicio
                 </Link>
-                <div className="w-px h-4 bg-white/10"></div>
                 <Link
                     to="/liga"
                     className={`text-sm font-black tracking-widest uppercase transition-colors ${pathname === '/liga' ? 'text-primary' : 'text-gray-500 hover:text-white'}`}
                 >
                     Liga
+                </Link>
+                <div className="w-px h-4 bg-white/10"></div>
+                <Link
+                    to="/fichajes"
+                    className={`text-sm font-black tracking-widest uppercase transition-colors ${pathname === '/fichajes' ? 'text-primary' : 'text-gray-500 hover:text-white'}`}
+                >
+                    Fichajes
                 </Link>
             </div>
         </nav>

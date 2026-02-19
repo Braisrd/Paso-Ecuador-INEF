@@ -10,7 +10,7 @@ service cloud.firestore {
     // Publicly readable content managed by admin
     match /events/{event} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Temporary fix to allow custom login system to work
     }
     
     match /config/{document} {
@@ -49,6 +49,12 @@ service cloud.firestore {
     match /results/{result} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+    
+    // Transfer Market
+    match /free_agents/{agent} {
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

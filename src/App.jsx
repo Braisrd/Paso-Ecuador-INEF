@@ -2,16 +2,24 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Liga from './pages/Liga';
+import TransferMarket from './pages/TransferMarket';
 import { Header, ScrollToTop } from './components/Layout';
+import { isInstagramBrowser } from './utils/browserDetection';
+import BrowserWarning from './components/BrowserWarning';
 
 function App() {
+    if (isInstagramBrowser()) {
+        return <BrowserWarning />;
+    }
+
     return (
-        <Router basename="/Paso-Ecuador-INEF/">
+        <Router basename="/">
             <ScrollToTop />
-            <div className="min-h-screen">
+            <div className="min-h-[100dvh]">
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/liga" element={<Liga />} />
+                    <Route path="/fichajes" element={<TransferMarket />} />
                 </Routes>
                 <Header />
             </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar as CalendarIcon, MapPin, ExternalLink } from 'lucide-react';
 import Modal from '../UI/Modal';
+import { parseDate } from '../../utils/dateUtils';
 
 const ActionButton = ({ event, onOpenForm }) => {
     if (event.actionType === 'none') return null;
@@ -70,7 +71,7 @@ const EventDetailModal = ({ event, onClose, onOpenForm }) => {
 
                     <div className="flex items-center gap-2 text-sky-400 font-bold mb-4">
                         <CalendarIcon className="w-5 h-5" />
-                        {new Date(event.date).toLocaleDateString('es-ES', {
+                        {parseDate(event.date).toLocaleDateString('es-ES', {
                             weekday: 'long',
                             day: 'numeric',
                             month: 'long',

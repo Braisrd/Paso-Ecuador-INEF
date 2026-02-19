@@ -41,6 +41,7 @@ import DatabaseView from '../components/Admin/DatabaseView';
 
 import { usePWAInstall } from '../hooks/usePWA';
 import { useNotifications } from '../hooks/useNotifications';
+import { parseDate } from '../utils/dateUtils';
 
 const Home = () => {
     // Data State
@@ -85,7 +86,7 @@ const Home = () => {
 
             // Unread logic
             const lastViewed = localStorage.getItem('last_inbox_view');
-            if (data.length > 0 && (!lastViewed || new Date(data[0].date) > new Date(lastViewed))) {
+            if (data.length > 0 && (!lastViewed || parseDate(data[0].date) > new Date(lastViewed))) {
                 setHasUnread(true);
             }
         });
@@ -133,7 +134,7 @@ const Home = () => {
         setStatsEvent(event);
     };
 
-    const upcomingEvents = events.filter(e => new Date(e.date) >= new Date().setHours(0, 0, 0, 0));
+    const upcomingEvents = events.filter(e => parseDate(e.date) >= new Date().setHours(0, 0, 0, 0));
 
     if (view === 'database') {
         return (
@@ -219,7 +220,7 @@ const Home = () => {
                                     </div>
                                 )}
                                 <div className="text-sky-400 font-black tracking-widest text-xs mb-3 uppercase">
-                                    {new Date(evt.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                    {parseDate(evt.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                     {evt.time && <span className="ml-2">• {evt.time}</span>}
                                 </div>
                                 <h3 className="text-3xl font-black text-white mb-3 leading-tight group-hover:text-sky-400 transition-colors">
@@ -331,7 +332,7 @@ const Home = () => {
                     <div className="p-8">
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-3xl font-black capitalize">
-                                {new Date(selectedDay.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                {parseDate(selectedDay.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </h2>
                         </div>
                         <div className="space-y-4">
