@@ -6,6 +6,7 @@ import {
     Ghost,
     PlusCircle,
     Trash2 as Trash,
+    Edit,
     Info,
     ChevronDown,
     Save,
@@ -88,7 +89,7 @@ const PlayerCard = ({ player, rank, onClick }) => {
     );
 };
 
-const AdminPanel = ({ players, processTournament, goBack, manualDelete, manualUpdatePoints, password, setPassword, description, setDescription }) => {
+const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, deleteTournament, goBack, manualDelete, manualUpdatePoints, password, setPassword, description, setDescription }) => {
     const [tName, setTName] = useState('');
     const [tDate, setTDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -96,16 +97,26 @@ const AdminPanel = ({ players, processTournament, goBack, manualDelete, manualUp
     const [tSecond, setTSecond] = useState('');
     const [tOthers, setTOthers] = useState('');
 
-    const [showSettings, setShowSettings] = useState(false);
+    const [activeTab, setActiveTab] = useState('new'); // 'new', 'manage', 'settings'
     const [oldPass, setOldPass] = useState('');
     const [newPass, setNewPass] = useState('');
     const [descInput, setDescInput] = useState(description);
 
+    const [editingTournamentId, setEditingTournamentId] = useState(null);
+
+    // No sorting state required right now
+
+    // Alias Management
+    const [mergingPlayer, setMergingPlayer] = useState(null);
+    const [selectedDuplicates, setSelectedDuplicates] = useState([]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!tName) return alert("Ponle nombre al torneo");
-        processTournament(tName, tDate, tFirst, tSecond, tOthers);
+        processTournament(tName, tDate, tFirst, tSecond, tOthers, editingTournamentId);
         setTFirst(''); setTSecond(''); setTOthers(''); setTName('');
+        setEditingTournamentId(null);
+        setActiveTab('manage');
     };
 
     const handlePassChange = () => {
@@ -127,16 +138,22 @@ const AdminPanel = ({ players, processTournament, goBack, manualDelete, manualUp
         <div className="min-h-screen p-4 md:p-8 pb-32 bg-liga">
             <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-8">
                 <div className="flex flex-col gap-8">
-                    <div className="flex gap-4">
-                        <button onClick={() => setShowSettings(!showSettings)} className="flex-1 glass-panel p-4 rounded-2xl flex items-center justify-center gap-2 font-bold hover:bg-white/5 transition-colors text-gray-300">
-                            <Shield className="w-5 h-5" /> {showSettings ? 'Volver a Torneos' : 'Configuración'}
+                    <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
+                        <button onClick={() => setActiveTab('new')} className={`flex-1 p-3 rounded-xl font-bold transition-all ${activeTab === 'new' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white'}`}>
+                            Nuevo
                         </button>
-                        <button onClick={goBack} className="glass-panel px-6 rounded-2xl text-red-400 hover:bg-white/5 transition-colors font-bold">
-                            Salir
+                        <button onClick={() => setActiveTab('manage')} className={`flex-1 p-3 rounded-xl font-bold transition-all ${activeTab === 'manage' ? 'bg-secondary text-white' : 'text-gray-400 hover:text-white'}`}>
+                            Torneos
+                        </button>
+                        <button onClick={() => setActiveTab('settings')} className={`flex-1 p-3 rounded-xl font-bold transition-all ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}>
+                            Ajustes
                         </button>
                     </div>
+                    <button onClick={goBack} className="glass-panel px-6 py-4 rounded-2xl text-red-400 hover:bg-white/5 transition-colors font-bold w-full">
+                        Salir del Panel
+                    </button>
 
-                    {showSettings ? (
+                    {activeTab === 'settings' ? (
                         <div className="glass-panel p-6 md:p-8 rounded-3xl h-fit space-y-8 animate-fade-in-up">
                             <h2 className="text-2xl font-bold text-white">Configuración</h2>
                             <div className="space-y-4">
@@ -158,12 +175,54 @@ const AdminPanel = ({ players, processTournament, goBack, manualDelete, manualUp
                                 </button>
                             </div>
                         </div>
+                    ) : activeTab === 'manage' ? (
+                        <div className="glass-panel p-6 md:p-8 rounded-3xl h-fit max-h-[700px] overflow-hidden flex flex-col animate-fade-in-up">
+                            <h2 className="text-2xl font-bold text-white mb-6">Gestionar Torneos</h2>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                                {tournaments.map(t => (
+                                    <div key={t.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex justify-between items-center group">
+                                        <div>
+                                            <div className="font-bold text-white">{t.name}</div>
+                                            <div className="text-xs text-gray-500">{new Date(t.date).toLocaleDateString()}</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    // Start deep edit
+                                                    setEditingTournamentId(t.id);
+                                                    setTName(t.name);
+                                                    setTDate(t.date);
+                                                    setTFirst(t.winners ? t.winners.join('\n') : '');
+                                                    setTSecond(t.secondPlace ? t.secondPlace.join('\n') : '');
+                                                    setTOthers(t.participants ? t.participants.join('\n') : '');
+                                                    setActiveTab('new');
+                                                }}
+                                                className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => deleteTournament(t.id)}
+                                                className="p-2 bg-red-500/10 rounded-lg text-red-500 hover:bg-red-500/20"
+                                            >
+                                                <Trash className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {tournaments.length === 0 && <p className="text-center py-8 text-gray-500 italic">No hay torneos registrados.</p>}
+                            </div>
+                        </div>
                     ) : (
                         <div className="glass-panel p-6 md:p-8 rounded-3xl h-fit animate-fade-in-up">
                             <div className="flex justify-between items-center mb-8">
                                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                                    <PlusCircle className="text-secondary w-6 h-6" /> Nuevo Torneo
+                                    {editingTournamentId ? <Edit className="text-secondary w-6 h-6" /> : <PlusCircle className="text-secondary w-6 h-6" />}
+                                    {editingTournamentId ? `Editando: ${tName}` : 'Nuevo Torneo'}
                                 </h2>
+                                {editingTournamentId && (
+                                    <button type="button" onClick={() => { setEditingTournamentId(null); setTFirst(''); setTSecond(''); setTOthers(''); setTName(''); setActiveTab('manage'); }} className="text-xs text-red-400 hover:text-red-300 font-bold">Cancelar Edición</button>
+                                )}
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
@@ -194,7 +253,7 @@ const AdminPanel = ({ players, processTournament, goBack, manualDelete, manualUp
                                     </div>
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-secondary rounded-xl font-bold text-white shadow-lg hover:shadow-primary/25 transition-all transform hover:scale-[1.02]">
-                                    Guardar Resultados
+                                    {editingTournamentId ? 'Actualizar Torneo y Recalcular Puntos' : 'Guardar Resultados'}
                                 </button>
                             </form>
                         </div>
@@ -224,6 +283,51 @@ const AdminPanel = ({ players, processTournament, goBack, manualDelete, manualUp
                             </div>
                         ))}
                     </div>
+
+                    {/* Alias Merge Modal */}
+                    {mergingPlayer && (
+                        <div className="absolute inset-0 bg-black/90 rounded-3xl p-6 flex flex-col z-10 animate-fade-in-up border border-blue-500/30 shadow-2xl shadow-blue-500/20">
+                            <h3 className="text-xl font-bold text-white mb-2">Unificar Jugador</h3>
+                            <p className="text-sm text-gray-400 mb-4">Selecciona los perfiles duplicados a fusionar dentro de <strong className="text-primary">{mergingPlayer.name}</strong>.</p>
+
+                            <div className="flex-1 overflow-y-auto mb-4 border border-white/5 rounded-xl p-2 bg-white/5">
+                                {players.filter(p => p.id !== mergingPlayer.id).map(p => (
+                                    <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedDuplicates.includes(p.id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) setSelectedDuplicates(prev => [...prev, p.id]);
+                                                else setSelectedDuplicates(prev => prev.filter(id => id !== p.id));
+                                            }}
+                                            className="w-4 h-4 accent-primary"
+                                        />
+                                        <div className="flex-1">
+                                            <div className="text-white font-medium">{p.name}</div>
+                                            <div className="text-xs text-secondary">{p.points} puntos</div>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button onClick={() => { setMergingPlayer(null); setSelectedDuplicates([]); }} className="flex-1 py-3 glass-panel rounded-xl text-gray-400 font-bold hover:text-white transition-colors">Cancelar</button>
+                                <button
+                                    onClick={() => {
+                                        if (selectedDuplicates.length > 0) {
+                                            mergePlayers(mergingPlayer, selectedDuplicates);
+                                            setMergingPlayer(null);
+                                            setSelectedDuplicates([]);
+                                        }
+                                    }}
+                                    disabled={selectedDuplicates.length === 0}
+                                    className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold transition-colors"
+                                >
+                                    Fusión (+{selectedDuplicates.length})
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -235,14 +339,16 @@ const Liga = () => {
     const [players, setPlayers] = useState([]);
     const [tournaments, setTournaments] = useState([]);
     const [description, setDescription] = useState(() => localStorage.getItem('liga_description') || INITIAL_DESCRIPTION);
-    const [password, setPassword] = useState(() => localStorage.getItem('liga_password') || "4321");
+    const [password, setPassword] = useState(() => {
+        const saved = localStorage.getItem('liga_password');
+        return (saved && saved !== "4321") ? saved : "InefSport26";
+    });
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [selectedTournament, setSelectedTournament] = useState('ALL');
     const [showInfo, setShowInfo] = useState(false);
 
-    const [isAdmin, setIsAdmin] = useState(false);
     const [adminPassInput, setAdminPassInput] = useState('');
 
     useEffect(() => {
@@ -260,20 +366,70 @@ const Liga = () => {
     useEffect(() => { localStorage.setItem('liga_description', description); }, [description]);
     useEffect(() => { localStorage.setItem('liga_password', password); }, [password]);
 
-    const processTournament = async (tName, tDate, rawFirst, rawSecond, rawParticipants) => {
+    const processTournament = async (tName, tDate, rawFirst, rawSecond, rawParticipants, editId = null) => {
         const parse = (txt) => txt.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
         const listFirst = parse(rawFirst);
         const listSecond = parse(rawSecond);
         const listOthers = parse(rawParticipants);
 
+        // Alias resolution helper
+        const resolvePlayer = (name) => {
+            const norm = normalizeName(name);
+            const existing = players.find(p =>
+                normalizeName(p.name) === norm ||
+                (p.aliases && p.aliases.some(a => normalizeName(a) === norm))
+            );
+            // Si existe, usamos el nombre PRINCIPAL (el del perfil), si no, el nuevo nombre
+            return existing ? existing.name : name;
+        };
+
+        // Si estamos editando, primero "deshacemos" los puntos del torneo antiguo
+        if (editId) {
+            const oldTourney = tournaments.find(t => t.id === editId);
+            if (oldTourney) {
+                // Buscamos jugadores que tengan este torneo en su historial
+                for (const p of players) {
+                    // Temporary simplified check just by name to revert points. Better is strict ID checking, but history holds names
+                    const oldEntries = p.history ? p.history.filter(h => h.tournament === oldTourney.name) : [];
+
+                    if (oldEntries.length > 0) {
+                        let pointsToDeduct = oldEntries.reduce((acc, curr) => acc + curr.points, 0);
+                        const newHistory = p.history.filter(h => h.tournament !== oldTourney.name);
+
+                        // Remake wins array by stripping out the old ones
+                        let newWins = p.wins || [];
+                        oldEntries.forEach(oe => {
+                            if (oe.type === '1º Puesto') {
+                                // remove one instance of this win date
+                                const winDate = new Date(oe.date).getTime();
+                                const index = newWins.indexOf(winDate);
+                                if (index > -1) newWins.splice(index, 1);
+                            }
+                        })
+
+                        try {
+                            await updateDoc(doc(db, "players", p.id), {
+                                history: newHistory,
+                                points: Math.max(0, p.points - pointsToDeduct),
+                                wins: newWins
+                            });
+                        } catch (error) {
+                            console.error("Error reverting points for player", p.name, error);
+                        }
+                    }
+                }
+            }
+        } // Fin de Deshacer
+
         const processedNames = new Set();
         const updateOperations = [];
 
-        const queueUpdate = (name, points, type) => {
-            const norm = normalizeName(name);
+        const queueUpdate = (rawName, points, type) => {
+            const resolvedName = resolvePlayer(rawName);
+            const norm = normalizeName(resolvedName);
             if (processedNames.has(norm)) return;
             processedNames.add(norm);
-            updateOperations.push({ name, points, type });
+            updateOperations.push({ name: resolvedName, points, type });
         };
 
         listFirst.forEach(n => queueUpdate(n, 5, '1º Puesto'));
@@ -312,12 +468,27 @@ const Liga = () => {
             }
         }
 
-        const newTourney = { name: tName, date: tDate, winners: listFirst };
+        const newTourneyData = { name: tName, date: tDate, winners: listFirst, secondPlace: listSecond, participants: listOthers };
         try {
-            await addDoc(collection(db, "tournaments"), newTourney);
-            alert("Torneo guardado y sincronizado.");
+            if (editId) {
+                await updateDoc(doc(db, "tournaments", editId), newTourneyData);
+                alert("Torneo actualizado y puntos recalculados.");
+            } else {
+                await addDoc(collection(db, "tournaments"), newTourneyData);
+                alert("Torneo guardado y sincronizado.");
+            }
         } catch (e) {
             alert("Error guardando torneo: " + e.message);
+        }
+    };
+
+    const deleteTournament = async (id) => {
+        if (confirm("¿Seguro que quieres eliminar este registro de torneo? Nota: Los puntos ya asignados a los jugadores no se verán afectados.")) {
+            try {
+                await deleteDoc(doc(db, "tournaments", id));
+            } catch (e) {
+                alert("Error eliminando torneo: " + e.message);
+            }
         }
     };
 
@@ -344,19 +515,70 @@ const Liga = () => {
         }
     };
 
+    const mergePlayers = async (mainPlayer, duplicateIds) => {
+        if (!confirm(`¿Seguro que quieres fusionar a ${duplicateIds.length} perfil(es) dentro de ${mainPlayer.name}? Ellos desaparecerán como perfiles separados y se sumarán sus puntos/historial sin duplicados.`)) return;
+
+        try {
+            let totalPoints = mainPlayer.points;
+            let mergedHistory = mainPlayer.history ? [...mainPlayer.history] : [];
+            let mergedWins = mainPlayer.wins ? [...mainPlayer.wins] : [];
+            let newAliases = mainPlayer.aliases ? [...mainPlayer.aliases] : [];
+
+            // Helper para comprobar historiales
+            const historyContainsTournament = (historyArr, tourneyName) => {
+                return historyArr.some(h => String(h.tournament).toLowerCase() === String(tourneyName).toLowerCase());
+            };
+
+            for (const dupId of duplicateIds) {
+                const dupPlayer = players.find(p => p.id === dupId);
+                if (!dupPlayer) continue;
+
+                newAliases.push(dupPlayer.name);
+                if (dupPlayer.aliases) {
+                    newAliases.push(...dupPlayer.aliases);
+                }
+
+                if (dupPlayer.history) {
+                    dupPlayer.history.forEach(h => {
+                        // Evitar sumar puntos si "Miguel" y "Miguel A" ya puntuaron en el MISMO torneo individualmente por error
+                        if (!historyContainsTournament(mergedHistory, h.tournament)) {
+                            mergedHistory.push(h);
+                            totalPoints += h.points;
+                            if (h.type === '1º Puesto') {
+                                mergedWins.push(new Date(h.date).getTime());
+                            }
+                        }
+                    });
+                }
+
+                // Borrar perfil duplicado
+                await deleteDoc(doc(db, "players", dupId));
+            }
+
+            // Actualizar jugador principal
+            await updateDoc(doc(db, "players", mainPlayer.id), {
+                points: totalPoints,
+                history: mergedHistory,
+                wins: mergedWins,
+                aliases: [...new Set(newAliases)] // Deduplicate aliases
+            });
+
+            alert(`Fusión completada. El jugador ahora tiene ${totalPoints} puntos.`);
+        } catch (error) {
+            alert("Error general durante la fusión: " + error.message);
+        }
+    };
+
     const sortedPlayers = useMemo(() => {
         let list = [...players];
         if (selectedTournament !== 'ALL') {
-            const tourneyObj = tournaments.find(t => t.id === selectedTournament);
-            if (tourneyObj) {
-                list = list.map(p => {
-                    const tourneyPoints = p.history
-                        ? p.history.filter(h => h.tournament === tourneyObj.name)
-                            .reduce((sum, h) => sum + h.points, 0)
-                        : 0;
-                    return { ...p, displayPoints: tourneyPoints };
-                }).filter(p => p.displayPoints > 0);
-            }
+            list = list.map(p => {
+                const tourneyPoints = p.history
+                    ? p.history.filter(h => h.tournament === selectedTournament)
+                        .reduce((sum, h) => sum + h.points, 0)
+                    : 0;
+                return { ...p, displayPoints: tourneyPoints };
+            }).filter(p => p.displayPoints > 0);
         } else {
             list = list.map(p => ({ ...p, displayPoints: p.points }));
         }
@@ -386,7 +608,7 @@ const Liga = () => {
             list = list.filter(p => normalizeName(p.name).includes(normalizeName(searchTerm)));
         }
         return list;
-    }, [players, searchTerm, selectedTournament, tournaments]);
+    }, [players, searchTerm, selectedTournament]);
 
     const topPlayer = sortedPlayers.length > 0 ? sortedPlayers[0] : null;
 
@@ -445,8 +667,8 @@ const Liga = () => {
                                     onChange={e => setSelectedTournament(e.target.value)}
                                 >
                                     <option value="ALL">Clasificación Global</option>
-                                    {tournaments.map(t => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    {[...new Set(tournaments.map(t => t.name))].map(name => (
+                                        <option key={name} value={name}>{name}</option>
                                     ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
@@ -480,7 +702,7 @@ const Liga = () => {
                             const url = window.location.href;
                             const title = 'Liga Multisport - Clasificación';
                             if (navigator.share) {
-                                try { await navigator.share({ title, text: '¡Mira la clasificación en directo!', url }); } catch (e) { }
+                                try { await navigator.share({ title, text: '¡Mira la clasificación en directo!', url }); } catch { /* user cancelled share */ }
                             } else {
                                 navigator.clipboard.writeText(url);
                                 alert('Enlace copiado al portapapeles');
@@ -581,7 +803,6 @@ const Liga = () => {
                             setAdminPassInput(e.target.value);
                             if (e.target.value === password) {
                                 setView('admin');
-                                setIsAdmin(true);
                             }
                         }}
                     />
@@ -594,7 +815,10 @@ const Liga = () => {
     return (
         <AdminPanel
             players={players}
+            tournaments={tournaments}
             processTournament={processTournament}
+            deleteTournament={deleteTournament}
+            mergePlayers={mergePlayers}
             goBack={() => { setView('public'); setAdminPassInput(''); }}
             manualDelete={manualDelete}
             manualUpdatePoints={manualUpdatePoints}
