@@ -46,9 +46,24 @@ html,
     padding: 0;
     width: 100%;
     min-height: 100%;
+    /* iOS Viewport fixes */
+    min-height: 100svh; 
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+
+/* Override Tailwind min-h-screen to use svh */
+@layer utilities {
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+  .h-screen {
+    height: 100vh;
+    height: 100svh;
+  }
+}
+
 
 .glass {
     background: rgba(19, 19, 31, 0.7);

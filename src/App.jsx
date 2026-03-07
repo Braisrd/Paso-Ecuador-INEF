@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Liga from './pages/Liga';
@@ -8,6 +8,16 @@ import { isInstagramBrowser } from './utils/browserDetection';
 import BrowserWarning from './components/BrowserWarning';
 
 function App() {
+    // 3. Router Resilience: Strip tracking parameters that break hydration
+    useEffect(() => {
+        if (window.location.search.includes('fbclid=') || window.location.search.includes('igshid=')) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('fbclid');
+            url.searchParams.delete('igshid');
+            window.history.replaceState({}, document.title, url.toString());
+        }
+    }, []);
+
     if (isInstagramBrowser()) {
         return <BrowserWarning />;
     }
