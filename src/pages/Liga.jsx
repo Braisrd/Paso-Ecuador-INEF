@@ -104,11 +104,197 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
 
     const [editingTournamentId, setEditingTournamentId] = useState(null);
 
-    // No sorting state required right now
+    // Player Database State
+    const [playerSortOrder, setPlayerSortOrder] = useState('points'); // 'name', 'points'
+    const [playerSearch, setPlayerSearch] = useState('');
+    const [editingPlayer, setEditingPlayer] = useState(null);
+    const [selectedTournamentForPlayer, setSelectedTournamentForPlayer] = useState('');
+    const [playerRankInTournament, setPlayerRankInTournament] = useState('participation');
+    const [repairing, setRepairing] = useState(false);
+    const [auditLog, setAuditLog] = useState([]);
+
+    const repairDatabase = async () => {
+        if (!confirm("Esto recalculará TODOS los puntos de todos los jugadores basándose en los torneos guardados. Los puntos actuales se borrarán y se reconstruirán desde los registros de torneos. ¿Continuar?")) return;
+        setRepairing(true);
+        setAuditLog(["Iniciando reconstrucción total..."]);
+        try {
+            const playerMap = {};
+            
+            // 1. Initialize map with existing players
+            players.forEach(p => {
+                playerMap[normalizeName(p.name)] = { 
+                    id: p.id, 
+                    name: p.name, 
+                    points: 0, 
+                    history: [], 
+                    wins: [], 
+                    aliases: p.aliases || [] 
+                };
+            });
+
+            const resolveFromMap = (name) => {
+                const norm = normalizeName(name);
+                for (const key in playerMap) {
+                    if (key === norm || playerMap[key].aliases.some(a => normalizeName(a) === norm)) return key;
+                }
+                return null;
+            };
+
+            // 2. Process tournaments
+            for (const t of tournaments) {
+                // Heurística de campos (por si hay nombres antiguos en la BD)
+                const first = t.winners || t.ganadores || t.top1 || [];
+                const second = t.secondPlace || t.segundos || t.top2 || [];
+                const others = t.participants || t.others || t.participantes || [];
+
+                setAuditLog(prev => [...prev, `Procesando: ${t.name} (${first.length + second.length + others.length} personas)`]);
+
+                const processList = (names, pts, type) => {
+                    names.forEach(n => {
+                        let principalKey = resolveFromMap(n);
+                        if (!principalKey) {
+                            principalKey = normalizeName(n);
+                            playerMap[principalKey] = { name: n, points: 0, history: [], wins: [], aliases: [] };
+                        }
+                        const p = playerMap[principalKey];
+                        p.points += pts;
+                        p.history.push({ tournament: t.name, tournamentId: t.id, points: pts, date: t.date, type });
+                        if (type === '1º Puesto') {
+                            const winDate = new Date(t.date).getTime();
+                            if (!p.wins.includes(winDate)) p.wins.push(winDate);
+                        }
+                    });
+                };
+
+                processList(first, 5, '1º Puesto');
+                processList(second, 3, '2º Puesto');
+                processList(others, 1, 'Participación');
+            }
+
+            // 3. Commit
+            setAuditLog(prev => [...prev, `Actualizando ${Object.keys(playerMap).length} perfiles en Firebase...`]);
+            for (const key in playerMap) {
+                const p = playerMap[key];
+                if (p.id) {
+                    await updateDoc(doc(db, "players", p.id), {
+                        points: p.points,
+                        history: p.history,
+                        wins: p.wins
+                    });
+                } else {
+                    await addDoc(collection(db, "players"), {
+                        name: p.name,
+                        points: p.points,
+                        history: p.history,
+                        wins: p.wins,
+                        aliases: p.aliases
+                    });
+                }
+            }
+            setAuditLog(prev => [...prev, "¡ÉXITO! Base de datos sincronizada."]);
+            alert("Clasificación reconstruida correctamente.");
+        } catch (e) {
+            console.error(e);
+            setAuditLog(prev => [...prev, `ERROR: ${e.message}`]);
+            alert("Error: " + e.message);
+        }
+        setRepairing(false);
+    };
 
     // Alias Management
     const [mergingPlayer, setMergingPlayer] = useState(null);
     const [selectedDuplicates, setSelectedDuplicates] = useState([]);
+    const [aliasSearch, setAliasSearch] = useState('');
+
+    const handleUpdateHistoryEntry = async (player, index, newType) => {
+        const entry = player.history[index];
+        const oldPoints = entry.points;
+        const newPoints = newType === '1º Puesto' ? 5 : newType === '2º Puesto' ? 3 : 1;
+        
+        const newHistory = [...player.history];
+        newHistory[index] = { ...entry, type: newType, points: newPoints };
+        
+        const pointsDelta = newPoints - oldPoints;
+        
+        let newWins = player.wins ? [...player.wins] : [];
+        if (entry.type === '1º Puesto' && newType !== '1º Puesto') {
+            const winDate = new Date(entry.date).getTime();
+            const winIdx = newWins.indexOf(winDate);
+            if (winIdx > -1) newWins.splice(winIdx, 1);
+        } else if (entry.type !== '1º Puesto' && newType === '1º Puesto') {
+            newWins.push(new Date(entry.date).getTime());
+        }
+
+        try {
+            await updateDoc(doc(db, "players", player.id), {
+                history: newHistory,
+                points: Math.max(0, player.points + pointsDelta),
+                wins: newWins
+            });
+            setEditingPlayer({ ...player, history: newHistory, points: player.points + pointsDelta, wins: newWins });
+        } catch (e) { console.error(e); }
+    };
+
+    const handleDeleteHistoryEntry = async (player, index) => {
+        if (!confirm("¿Seguro que quieres eliminar esta participación? Se restarán los puntos correspondientes.")) return;
+        
+        const entry = player.history[index];
+        const newHistory = player.history.filter((_, i) => i !== index);
+        const pointsToSubtract = entry.points;
+        
+        let newWins = player.wins ? [...player.wins] : [];
+        if (entry.type === '1º Puesto') {
+            const winDate = new Date(entry.date).getTime();
+            const winIdx = newWins.indexOf(winDate);
+            if (winIdx > -1) newWins.splice(winIdx, 1);
+        }
+
+        try {
+            await updateDoc(doc(db, "players", player.id), {
+                history: newHistory,
+                points: Math.max(0, player.points - pointsToSubtract),
+                wins: newWins
+            });
+            setEditingPlayer({ ...player, history: newHistory, points: Math.max(0, player.points - pointsToSubtract), wins: newWins });
+        } catch (e) { console.error(e); }
+    };
+
+    const handleRemoveAlias = async (player, aliasToRemove) => {
+        if (!confirm(`¿Desvincular "${aliasToRemove}"? El nombre dejará de ser detectado como un alias de este perfil.`)) return;
+        const newAliases = (player.aliases || []).filter(a => a !== aliasToRemove);
+        try {
+            await updateDoc(doc(db, "players", player.id), {
+                aliases: newAliases
+            });
+            setEditingPlayer({ ...player, aliases: newAliases });
+        } catch (e) { console.error(e); }
+    };
+
+    const mergeablePlayers = useMemo(() => {
+        let list = players.filter(p => p.id !== mergingPlayer?.id);
+        if (aliasSearch) {
+            const norm = normalizeName(aliasSearch);
+            list = list.filter(p => normalizeName(p.name).includes(norm));
+        }
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        return list;
+    }, [players, mergingPlayer, aliasSearch]);
+
+    const filteredAndSortedPlayers = useMemo(() => {
+        let list = [...players];
+        if (playerSearch) {
+            const normSearch = normalizeName(playerSearch);
+            list = list.filter(p =>
+                normalizeName(p.name).includes(normSearch) ||
+                (p.aliases && p.aliases.some(a => normalizeName(a).includes(normSearch)))
+            );
+        }
+        list.sort((a, b) => {
+            if (playerSortOrder === 'name') return a.name.localeCompare(b.name);
+            return b.points - a.points;
+        });
+        return list;
+    }, [players, playerSearch, playerSortOrder]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -133,6 +319,38 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
         setNewPass('');
         setOldPass('');
     }
+
+    const handlePlayerToTournament = (player, tournamentId, rank) => {
+        const t = tournaments.find(tour => tour.id === tournamentId);
+        if (!t) return;
+
+        // Check if player is already in this tournament to avoid duplicates
+        const allNames = [...(t.winners || []), ...(t.secondPlace || []), ...(t.participants || [])];
+        const normPlayer = normalizeName(player.name);
+        const normAliases = (player.aliases || []).map(normalizeName);
+
+        const isDuplicate = allNames.some(n => {
+            const normN = normalizeName(n);
+            return normN === normPlayer || normAliases.includes(normN);
+        });
+
+        if (isDuplicate) {
+            if (!confirm(`${player.name} ya parece estar en este torneo. ¿Añadir de todos modos?`)) return;
+        }
+
+        const winners = [...(t.winners || [])];
+        const second = [...(t.secondPlace || [])];
+        const participants = [...(t.participants || [])];
+
+        if (rank === '1º Puesto') winners.push(player.name);
+        else if (rank === '2º Puesto') second.push(player.name);
+        else participants.push(player.name);
+
+        processTournament(t.name, t.date, winners.join('\n'), second.join('\n'), participants.join('\n'), t.id);
+        setEditingPlayer(null);
+        setSelectedTournamentForPlayer('');
+        alert(`¡Participación de ${player.name} registrada en "${t.name}"!`);
+    };
 
     return (
         <div className="min-h-screen p-4 md:p-8 pb-32 bg-liga">
@@ -174,42 +392,83 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                                     Actualizar Contraseña
                                 </button>
                             </div>
+                            
+                            <div className="space-y-4 border-t border-white/10 pt-4">
+                                <h3 className="text-red-500 uppercase text-xs font-bold">Zona de Recuperación</h3>
+                                <p className="text-[10px] text-gray-500 italic">Si notas que faltan puntos o hay errores tras una edición, este botón reconstruye la clasificación analizando todos los torneos.</p>
+                                <button 
+                                    onClick={repairDatabase} 
+                                    disabled={repairing}
+                                    className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-xl font-bold transition-all disabled:opacity-50"
+                                >
+                                    {repairing ? 'Reparando...' : '🔥 RECONSTRUIR PUNTOS Y CLASIFICACIÓN'}
+                                </button>
+                                
+                                {tournaments.length > 0 && (
+                                    <div className="bg-white/5 p-3 rounded-lg text-[9px] font-mono text-gray-500 overflow-hidden">
+                                        Campos detectados en DB: {Object.keys(tournaments[0]).filter(k => !['id','name','date'].includes(k)).join(', ')}
+                                    </div>
+                                )}
+                                
+                                {auditLog.length > 0 && (
+                                    <div className="bg-black/60 p-4 rounded-xl border border-white/5 max-h-40 overflow-y-auto custom-scrollbar text-[10px] font-mono space-y-1">
+                                        {auditLog.map((log, i) => (
+                                            <div key={i} className={log.startsWith('ERROR') ? 'text-red-400' : log.startsWith('PROCESANDO') ? 'text-blue-300' : 'text-gray-400'}>
+                                                {log}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : activeTab === 'manage' ? (
                         <div className="glass-panel p-6 md:p-8 rounded-3xl h-fit max-h-[700px] overflow-hidden flex flex-col animate-fade-in-up">
-                            <h2 className="text-2xl font-bold text-white mb-6">Gestionar Torneos</h2>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                                {tournaments.map(t => (
-                                    <div key={t.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex justify-between items-center group">
-                                        <div>
-                                            <div className="font-bold text-white">{t.name}</div>
-                                            <div className="text-xs text-gray-500">{new Date(t.date).toLocaleDateString()}</div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-white">Modificar Torneos</h2>
+                            <div className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">
+                                Total: {tournaments.length}
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                            {tournaments.map(t => (
+                                <div key={t.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex justify-between items-center group hover:border-primary/30 transition-all">
+                                    <div className="space-y-1">
+                                        <div className="font-bold text-white group-hover:text-primary transition-colors flex items-center gap-2">
+                                            {t.name}
+                                            <span className="text-[8px] bg-white/5 px-1.5 py-0.5 rounded text-gray-500 font-normal">
+                                                {(t.winners?.length || 0) + (t.secondPlace?.length || 0) + (t.participants?.length || 0)} pers.
+                                            </span>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    // Start deep edit
-                                                    setEditingTournamentId(t.id);
-                                                    setTName(t.name);
-                                                    setTDate(t.date);
-                                                    setTFirst(t.winners ? t.winners.join('\n') : '');
-                                                    setTSecond(t.secondPlace ? t.secondPlace.join('\n') : '');
-                                                    setTOthers(t.participants ? t.participants.join('\n') : '');
-                                                    setActiveTab('new');
-                                                }}
-                                                className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => deleteTournament(t.id)}
-                                                className="p-2 bg-red-500/10 rounded-lg text-red-500 hover:bg-red-500/20"
-                                            >
-                                                <Trash className="w-4 h-4" />
-                                            </button>
+                                        <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                                            <Info className="w-3 h-3" /> {new Date(t.date).toLocaleDateString('es-ES')}
                                         </div>
                                     </div>
-                                ))}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setEditingTournamentId(t.id);
+                                                setTName(t.name);
+                                                setTDate(t.date);
+                                                setTFirst(t.winners ? t.winners.join('\n') : '');
+                                                setTSecond(t.secondPlace ? t.secondPlace.join('\n') : '');
+                                                setTOthers(t.participants ? t.participants.join('\n') : '');
+                                                setActiveTab('new');
+                                            }}
+                                            className="p-3 bg-primary/10 rounded-lg text-primary hover:bg-primary hover:text-black transition-all flex items-center gap-2 font-bold text-xs"
+                                            title="Modificar Torneo"
+                                        >
+                                            <Edit className="w-4 h-4" /> MODIFICAR
+                                        </button>
+                                        <button
+                                            onClick={() => { if(confirm(`¿Eliminar "${t.name}"? Los puntos de los jugadores NO se restarán automáticamente si lo borras directamente aquí. Es mejor modificarlo y quitar a los participantes.`)) deleteTournament(t.id); }}
+                                            className="p-3 bg-red-500/10 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/0 hover:shadow-red-500/20"
+                                            title="Eliminar"
+                                        >
+                                            <Trash className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                                 {tournaments.length === 0 && <p className="text-center py-8 text-gray-500 italic">No hay torneos registrados.</p>}
                             </div>
                         </div>
@@ -253,27 +512,61 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                                     </div>
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-secondary rounded-xl font-bold text-white shadow-lg hover:shadow-primary/25 transition-all transform hover:scale-[1.02]">
-                                    {editingTournamentId ? 'Actualizar Torneo y Recalcular Puntos' : 'Guardar Resultados'}
+                                    {editingTournamentId ? 'Confirmar Cambios y Recalcular Puntos' : 'Guardar Resultados'}
                                 </button>
                             </form>
                         </div>
                     )}
                 </div>
 
-                <div className="glass-panel p-6 rounded-3xl h-[800px] flex flex-col">
-                    <h3 className="text-xl font-bold text-white mb-6">Base de Datos ({players.length})</h3>
+                <div className="glass-panel p-6 rounded-3xl h-[800px] flex flex-col relative overflow-hidden">
+                    <div className="mb-6 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-white">Base de Datos ({players.length})</h3>
+                            <div className="flex bg-white/5 p-1 rounded-lg">
+                                <button
+                                    onClick={() => setPlayerSortOrder('points')}
+                                    className={`px-3 py-1 text-[10px] font-bold rounded ${playerSortOrder === 'points' ? 'bg-primary text-black' : 'text-gray-400'}`}
+                                >PUNTOS</button>
+                                <button
+                                    onClick={() => setPlayerSortOrder('name')}
+                                    className={`px-3 py-1 text-[10px] font-bold rounded ${playerSortOrder === 'name' ? 'bg-primary text-black' : 'text-gray-400'}`}
+                                >NOMBRE</button>
+                            </div>
+                        </div>
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Buscar participante..."
+                                className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                                value={playerSearch}
+                                onChange={e => setPlayerSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                        {players.map(p => (
+                        {filteredAndSortedPlayers.map(p => (
                             <div key={p.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 group">
-                                <span className="font-medium text-gray-300">{p.name}</span>
-                                <div className="flex items-center gap-4">
-                                    <span className="font-bold text-white">{p.points} pts</span>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-gray-300">{p.name}</span>
+                                    {p.aliases && p.aliases.length > 0 && (
+                                        <span className="text-[9px] text-gray-500 italic truncate max-w-[140px]">Alias: {p.aliases.join(', ')}</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm">{p.points} pts</span>
                                     <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => setEditingPlayer(p)}
+                                            className="text-primary hover:bg-primary/20 p-2 rounded"
+                                            title="Editar Participante"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
                                         <button onClick={() => manualUpdatePoints(p.id, 1)} className="text-green-400 hover:bg-green-500/20 p-2 rounded" title="+1">
                                             <PlusCircle className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => manualUpdatePoints(p.id, -1)} className="text-yellow-400 hover:bg-yellow-500/20 p-2 rounded" title="-1">
-                                            <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">-</div>
                                         </button>
                                         <button onClick={() => manualDelete(p.id)} className="text-red-500 hover:bg-red-500/20 p-2 rounded" title="Eliminar">
                                             <Trash className="w-4 h-4" />
@@ -284,15 +577,182 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                         ))}
                     </div>
 
+                    {/* Advanced Player Editor Modal */}
+                    {editingPlayer && (
+                        <div className="absolute inset-0 bg-black/95 z-20 p-6 flex flex-col animate-fade-in-up border border-primary/20 rounded-3xl">
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <h3 className="text-2xl font-black text-white">{editingPlayer.name}</h3>
+                                    <p className="text-primary font-bold">{editingPlayer.points} puntos actuales</p>
+                                </div>
+                                <button onClick={() => setEditingPlayer(null)} className="p-2 text-gray-500 hover:text-white transition-colors">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
+                                {/* Section: Manual Points Adjustment */}
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Ajuste Rápido de Puntos</h4>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => manualUpdatePoints(editingPlayer.id, -1)}
+                                            className="flex-1 py-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl font-bold hover:bg-red-500/20 transition-all"
+                                        >-1 Pto</button>
+                                        <button 
+                                            onClick={() => manualUpdatePoints(editingPlayer.id, 1)}
+                                            className="flex-1 py-3 bg-green-500/10 border border-green-500/20 text-green-500 rounded-xl font-bold hover:bg-green-500/20 transition-all"
+                                        >+1 Pto</button>
+                                    </div>
+                                </div>
+
+                                {/* Section: Participation History Management */}
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Historial y Participaciones</h4>
+                                    <div className="space-y-3">
+                                        {editingPlayer.history && editingPlayer.history.slice().reverse().map((entry, revIdx) => {
+                                            const realIdx = editingPlayer.history.length - 1 - revIdx;
+                                            return (
+                                                <div key={realIdx} className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="font-bold text-white text-sm">{entry.tournament}</div>
+                                                            <div className="text-[10px] text-gray-500">{new Date(entry.date).toLocaleDateString()}</div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => handleDeleteHistoryEntry(editingPlayer, realIdx)}
+                                                            className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                                                            title="Eliminar Participación"
+                                                        >
+                                                            <Trash className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-1">
+                                                        {[
+                                                            { label: '🥇 1º', type: '1º Puesto' },
+                                                            { label: '🥈 2º', type: '2º Puesto' },
+                                                            { label: '🥉 Part.', type: 'Participación' }
+                                                        ].map(rank => (
+                                                            <button 
+                                                                key={rank.type}
+                                                                onClick={() => handleUpdateHistoryEntry(editingPlayer, realIdx, rank.type)}
+                                                                className={`py-1.5 rounded-lg text-[9px] font-bold border transition-all ${entry.type === rank.type ? 'bg-white text-black border-white' : 'border-white/10 text-gray-500 hover:border-white/30'}`}
+                                                            >
+                                                                {rank.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {(!editingPlayer.history || editingPlayer.history.length === 0) && (
+                                            <p className="text-[10px] text-gray-600 italic text-center py-4">Sin participaciones registradas.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Section: Current Aliases Management */}
+                                {editingPlayer.aliases && editingPlayer.aliases.length > 0 && (
+                                    <div className="space-y-4">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Nombres Unificados actualmente</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {editingPlayer.aliases.map(alias => (
+                                                <div key={alias} className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg">
+                                                    <span className="text-xs text-blue-400 font-medium">{alias}</span>
+                                                    <button 
+                                                        onClick={() => handleRemoveAlias(editingPlayer, alias)}
+                                                        className="hover:text-red-500 text-blue-400 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Section: Add new Unification */}
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Unificar Nombres (Duplicados)</h4>
+                                    <p className="text-[10px] text-gray-500 leading-relaxed italic">
+                                        Usa esta opción si esta persona aparece en la base de datos con otros nombres (ej: "Miguel" y "Miguel López").
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            setMergingPlayer(editingPlayer);
+                                            setEditingPlayer(null);
+                                        }}
+                                        className="w-full py-3 bg-secondary/10 border border-secondary/20 text-secondary font-bold rounded-xl text-sm hover:bg-secondary/20 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Shield className="w-4 h-4" /> Buscar Duplicados para Unificar
+                                    </button>
+                                </div>
+
+                                {/* Section: Add to Tournament (Manual) */}
+                                <div className="space-y-4 opacity-70">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Registrar en Torneo Manualmente</h4>
+                                    <div className="space-y-3">
+                                        <select
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-primary cursor-pointer"
+                                            value={selectedTournamentForPlayer}
+                                            onChange={e => setSelectedTournamentForPlayer(e.target.value)}
+                                        >
+                                            <option value="">Seleccionar Torneo...</option>
+                                            {tournaments.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name} ({new Date(t.date).toLocaleDateString()})</option>
+                                            ))}
+                                        </select>
+
+                                        {selectedTournamentForPlayer && (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <button
+                                                        onClick={() => setPlayerRankInTournament('1º Puesto')}
+                                                        className={`p-2 rounded-lg text-[10px] font-bold border transition-all ${playerRankInTournament === '1º Puesto' ? 'bg-yellow-500 border-yellow-500 text-black' : 'border-white/10 text-gray-400'}`}
+                                                    >🥇 1º (+5)</button>
+                                                    <button
+                                                        onClick={() => setPlayerRankInTournament('2º Puesto')}
+                                                        className={`p-2 rounded-lg text-[10px] font-bold border transition-all ${playerRankInTournament === '2º Puesto' ? 'bg-gray-300 border-gray-300 text-black' : 'border-white/10 text-gray-400'}`}
+                                                    >🥈 2º (+3)</button>
+                                                    <button
+                                                        onClick={() => setPlayerRankInTournament('participation')}
+                                                        className={`p-2 rounded-lg text-[10px] font-bold border transition-all ${playerRankInTournament === 'participation' ? 'bg-primary border-primary text-black' : 'border-white/10 text-gray-400'}`}
+                                                    >🥉 Par. (+1)</button>
+                                                </div>
+                                                <button
+                                                    onClick={() => handlePlayerToTournament(editingPlayer, selectedTournamentForPlayer, playerRankInTournament)}
+                                                    className="w-full py-3 bg-white text-black font-bold rounded-xl text-sm hover:bg-primary transition-colors"
+                                                >
+                                                    Registrar Nueva Participación
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Alias Merge Modal */}
                     {mergingPlayer && (
                         <div className="absolute inset-0 bg-black/90 rounded-3xl p-6 flex flex-col z-10 animate-fade-in-up border border-blue-500/30 shadow-2xl shadow-blue-500/20">
                             <h3 className="text-xl font-bold text-white mb-2">Unificar Jugador</h3>
                             <p className="text-sm text-gray-400 mb-4">Selecciona los perfiles duplicados a fusionar dentro de <strong className="text-primary">{mergingPlayer.name}</strong>.</p>
 
-                            <div className="flex-1 overflow-y-auto mb-4 border border-white/5 rounded-xl p-2 bg-white/5">
-                                {players.filter(p => p.id !== mergingPlayer.id).map(p => (
-                                    <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                <input 
+                                    type="text"
+                                    placeholder="Buscar por nombre..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-primary"
+                                    value={aliasSearch}
+                                    onChange={e => setAliasSearch(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto mb-4 border border-white/5 rounded-xl p-2 bg-white/5 custom-scrollbar">
+                                {mergeablePlayers.map(p => (
+                                    <label key={p.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors border-b border-white/5 last:border-0">
                                         <input
                                             type="checkbox"
                                             checked={selectedDuplicates.includes(p.id)}
@@ -304,10 +764,13 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                                         />
                                         <div className="flex-1">
                                             <div className="text-white font-medium">{p.name}</div>
-                                            <div className="text-xs text-secondary">{p.points} puntos</div>
+                                            <div className="text-[10px] text-primary">{p.points} pts</div>
                                         </div>
                                     </label>
                                 ))}
+                                {mergeablePlayers.length === 0 && (
+                                    <div className="text-center py-8 text-gray-600 italic text-sm">No se encontraron jugadores.</div>
+                                )}
                             </div>
 
                             <div className="flex gap-3">
@@ -341,8 +804,9 @@ const Liga = () => {
     const [description, setDescription] = useState(() => localStorage.getItem('liga_description') || INITIAL_DESCRIPTION);
     const [password, setPassword] = useState(() => {
         const saved = localStorage.getItem('liga_password');
-        return (saved && saved !== "4321") ? saved : "InefSport26";
+        return (saved && saved !== "4321") ? saved : "PasoWeb2526";
     });
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -372,114 +836,144 @@ const Liga = () => {
         const listSecond = parse(rawSecond);
         const listOthers = parse(rawParticipants);
 
-        // Alias resolution helper
         const resolvePlayer = (name) => {
             const norm = normalizeName(name);
             const existing = players.find(p =>
                 normalizeName(p.name) === norm ||
                 (p.aliases && p.aliases.some(a => normalizeName(a) === norm))
             );
-            // Si existe, usamos el nombre PRINCIPAL (el del perfil), si no, el nuevo nombre
             return existing ? existing.name : name;
         };
 
-        // Si estamos editando, primero "deshacemos" los puntos del torneo antiguo
+        // Create a local map of all players to safely modify their state without race conditions
+        const localPlayers = {};
+        players.forEach(p => {
+            localPlayers[normalizeName(p.name)] = {
+                id: p.id,
+                name: p.name,
+                points: p.points,
+                history: p.history ? [...p.history] : [],
+                wins: p.wins ? [...p.wins] : [],
+                aliases: p.aliases || [],
+                isModified: false,
+                isNew: false
+            };
+        });
+
+        const getLocalPlayer = (name) => {
+             const norm = normalizeName(name);
+             const existingKey = Object.keys(localPlayers).find(k => 
+                k === norm || localPlayers[k].aliases.some(a => normalizeName(a) === norm)
+             );
+             if (existingKey) return localPlayers[existingKey];
+
+             const newPlayer = { name: name, points: 0, history: [], wins: [], aliases: [], isModified: false, isNew: true };
+             localPlayers[norm] = newPlayer;
+             return newPlayer;
+        };
+
+        // 1. "Deshacer" (Undo) old tournament points locally
         if (editId) {
             const oldTourney = tournaments.find(t => t.id === editId);
             if (oldTourney) {
-                // Buscamos jugadores que tengan este torneo en su historial
-                for (const p of players) {
-                    // Temporary simplified check just by name to revert points. Better is strict ID checking, but history holds names
-                    const oldEntries = p.history ? p.history.filter(h => h.tournament === oldTourney.name) : [];
-
+                Object.values(localPlayers).forEach(p => {
+                    const oldEntries = p.history.filter(h => h.tournamentId === editId || (h.tournament === oldTourney.name && !h.tournamentId));
                     if (oldEntries.length > 0) {
                         let pointsToDeduct = oldEntries.reduce((acc, curr) => acc + curr.points, 0);
-                        const newHistory = p.history.filter(h => h.tournament !== oldTourney.name);
-
-                        // Remake wins array by stripping out the old ones
-                        let newWins = p.wins || [];
+                        p.history = p.history.filter(h => h.tournamentId !== editId && (h.tournament !== oldTourney.name || h.tournamentId));
+                        p.points = Math.max(0, p.points - pointsToDeduct);
+                        
                         oldEntries.forEach(oe => {
                             if (oe.type === '1º Puesto') {
-                                // remove one instance of this win date
                                 const winDate = new Date(oe.date).getTime();
-                                const index = newWins.indexOf(winDate);
-                                if (index > -1) newWins.splice(index, 1);
+                                const index = p.wins.indexOf(winDate);
+                                if (index > -1) p.wins.splice(index, 1);
                             }
-                        })
-
-                        try {
-                            await updateDoc(doc(db, "players", p.id), {
-                                history: newHistory,
-                                points: Math.max(0, p.points - pointsToDeduct),
-                                wins: newWins
-                            });
-                        } catch (error) {
-                            console.error("Error reverting points for player", p.name, error);
-                        }
+                        });
+                        p.isModified = true;
                     }
-                }
+                });
             }
         } // Fin de Deshacer
 
+        // 2. Apply new tournament results
         const processedNames = new Set();
-        const updateOperations = [];
-
+        
         const queueUpdate = (rawName, points, type) => {
             const resolvedName = resolvePlayer(rawName);
-            const norm = normalizeName(resolvedName);
-            if (processedNames.has(norm)) return;
-            processedNames.add(norm);
-            updateOperations.push({ name: resolvedName, points, type });
+            const p = getLocalPlayer(resolvedName);
+            const normKey = normalizeName(p.name);
+            
+            // Best Result Policy: si ya ha puntuado en este torneo por encima, no se le suman más puntos
+            if (processedNames.has(normKey)) return; 
+            processedNames.add(normKey);
+            
+            p.points += points;
+            p.history.push({ 
+                tournament: tName, 
+                tournamentId: editId || 'pending', // Temporal ID si es nuevo
+                points: points, 
+                date: tDate, 
+                type: type 
+            });
+            if (type === '1º Puesto') {
+                const winDate = new Date(tDate).getTime();
+                if (!p.wins.includes(winDate)) p.wins.push(winDate);
+            }
+            p.isModified = true;
         };
 
         listFirst.forEach(n => queueUpdate(n, 5, '1º Puesto'));
         listSecond.forEach(n => queueUpdate(n, 3, '2º Puesto'));
         listOthers.forEach(n => queueUpdate(n, 1, 'Participación'));
 
-        for (const op of updateOperations) {
-            let existing = players.find(p => normalizeName(p.name) === normalizeName(op.name));
-            if (existing) {
-                const newHistory = [...(existing.history || []), { tournament: tName, points: op.points, date: tDate, type: op.type }];
-                const newPoints = existing.points + op.points;
-                const newWins = [...(existing.wins || [])];
-                if (op.type === '1º Puesto') newWins.push(new Date(tDate).getTime());
-
-                try {
-                    await updateDoc(doc(db, "players", existing.id), {
-                        history: newHistory,
-                        points: newPoints,
-                        wins: newWins
-                    });
-                } catch (e) {
-                    console.error("Error updating player", op.name, e);
-                }
-            } else {
-                const newPlayer = {
-                    name: op.name,
-                    points: op.points,
-                    wins: op.type === '1º Puesto' ? [new Date(tDate).getTime()] : [],
-                    history: [{ tournament: tName, points: op.points, date: tDate, type: op.type }]
-                };
-                try {
-                    await addDoc(collection(db, "players"), newPlayer);
-                } catch (e) {
-                    console.error("Error creating player", op.name, e);
-                }
-            }
-        }
-
+        // 3. Save Tournament to DB
+        let finalTournamentId = editId;
         const newTourneyData = { name: tName, date: tDate, winners: listFirst, secondPlace: listSecond, participants: listOthers };
         try {
             if (editId) {
                 await updateDoc(doc(db, "tournaments", editId), newTourneyData);
-                alert("Torneo actualizado y puntos recalculados.");
             } else {
-                await addDoc(collection(db, "tournaments"), newTourneyData);
-                alert("Torneo guardado y sincronizado.");
+                const newTourneyRef = await addDoc(collection(db, "tournaments"), newTourneyData);
+                finalTournamentId = newTourneyRef.id;
             }
         } catch (e) {
             alert("Error guardando torneo: " + e.message);
+            return;
         }
+
+        // 4. Update modified players
+        for (const p of Object.values(localPlayers)) {
+            if (p.isModified) {
+                p.history.forEach(h => {
+                     if (h.tournament === tName && h.date === tDate && h.tournamentId === 'pending') {
+                         h.tournamentId = finalTournamentId;
+                     }
+                });
+
+                try {
+                    if (p.isNew) {
+                         await addDoc(collection(db, "players"), {
+                             name: p.name,
+                             points: p.points,
+                             history: p.history,
+                             wins: p.wins,
+                             aliases: p.aliases
+                         });
+                    } else {
+                         await updateDoc(doc(db, "players", p.id), {
+                             points: p.points,
+                             history: p.history,
+                             wins: p.wins
+                         });
+                    }
+                } catch (e) {
+                     console.error("Error updating player", p.name, e);
+                }
+            }
+        }
+        
+        alert(`Torneo ${editId ? 'actualizado' : 'guardado'} y puntos recalculados.`);
     };
 
     const deleteTournament = async (id) => {
@@ -592,16 +1086,12 @@ const Liga = () => {
             return lastWinB - lastWinA;
         });
 
+        let currentRank = 1;
         for (let i = 0; i < list.length; i++) {
-            if (i > 0) {
-                if (list[i].displayPoints === list[i - 1].displayPoints) {
-                    list[i].realRank = list[i - 1].realRank;
-                } else {
-                    list[i].realRank = i + 1;
-                }
-            } else {
-                list[i].realRank = 1;
+            if (i > 0 && list[i].displayPoints < list[i - 1].displayPoints) {
+                currentRank++;
             }
+            list[i].realRank = currentRank;
         }
 
         if (searchTerm) {
@@ -715,8 +1205,8 @@ const Liga = () => {
                     </button>
 
                     <button
-                        onClick={() => setView('login')}
-                        className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-white/10 text-white flex items-center justify-center transition-all shadow-lg transform hover:scale-110"
+                        onClick={() => isLoggedIn ? setView('admin') : setView('login')}
+                        className={`w-12 h-12 rounded-full border border-white/10 text-white flex items-center justify-center transition-all shadow-lg transform hover:scale-110 ${isLoggedIn ? 'bg-primary' : 'bg-gray-800 hover:bg-gray-700'}`}
                     >
                         <Shield className="w-5 h-5" />
                     </button>
@@ -802,6 +1292,7 @@ const Liga = () => {
                         onChange={e => {
                             setAdminPassInput(e.target.value);
                             if (e.target.value === password) {
+                                setIsLoggedIn(true);
                                 setView('admin');
                             }
                         }}

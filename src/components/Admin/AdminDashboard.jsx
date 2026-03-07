@@ -20,10 +20,7 @@ import {
     deleteDoc,
     doc,
     setDoc,
-    query,
-    orderBy,
-    limit,
-    onSnapshot
+    getDoc
 } from '../../services/firebase';
 
 const AdminDashboard = ({
@@ -57,6 +54,8 @@ const AdminDashboard = ({
     const [editingEventId, setEditingEventId] = useState(null);
     const [newType, setNewType] = useState({ name: '', color: '#6366f1', icon: '📌' });
     const [localSpecialSections, setLocalSpecialSections] = useState(specialSections || []);
+    const [passOld, setPassOld] = useState('');
+    const [passNew, setPassNew] = useState('');
 
     // Sync localSpecialSections when specialSections prop changes
     React.useEffect(() => {
@@ -139,7 +138,36 @@ const AdminDashboard = ({
             alert('Anuncio publicado');
             e.target.reset();
         } catch (err) {
+            console.error(err);
             alert('Error al publicar anuncio');
+        }
+    };
+
+    const handleUpdatePass = async () => {
+        if (!passOld || !passNew) {
+            alert('Rellena ambos campos');
+            return;
+        }
+        try {
+            const docRef = doc(db, 'config', 'settings');
+            const docSnap = await getDoc(docRef);
+            let currentInDB = 'PasoWeb2526';
+            if (docSnap.exists()) {
+                currentInDB = docSnap.data().adminPassword || 'PasoWeb2526';
+            }
+            
+            if (passOld !== currentInDB) {
+                alert('La contraseña actual no es correcta.');
+                return;
+            }
+            
+            await setDoc(docRef, { adminPassword: passNew }, { merge: true });
+            alert('Contraseña actualizada correctamente.');
+            setPassOld('');
+            setPassNew('');
+        } catch (err) {
+            console.error(err);
+            alert('Error al actualizar contraseña.');
         }
     };
 
@@ -157,7 +185,8 @@ const AdminDashboard = ({
                                 { id: 'events', l: 'Eventos' },
                                 { id: 'types', l: 'Categorías' },
                                 { id: 'special', l: 'Landing' },
-                                { id: 'inbox', l: 'Buzón' }
+                                { id: 'inbox', l: 'Buzón' },
+                                { id: 'settings', l: '⚙️' }
                             ].map(t => (
                                 <button
                                     key={t.id}
@@ -431,6 +460,50 @@ const AdminDashboard = ({
                                     </div>
                                 ))}
                                 {announcements.length === 0 && <p className="text-center text-gray-600 italic py-8 text-sm">No hay avisos anteriores.</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'settings' && (
+                        <div className="animate-fade-in max-w-sm mx-auto space-y-8 py-10">
+                            <div className="bg-white/5 p-8 rounded-3xl border border-white/5 space-y-6">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                                    <Settings className="w-6 h-6 text-primary" /> Seguridad Admin
+                                </h3>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest pl-1 mb-1 block">Contraseña Actual</label>
+                                        <input 
+                                            type="password"
+                                            value={passOld}
+                                            onChange={e => setPassOld(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 p-3 rounded-xl focus:border-primary outline-none"
+                                            placeholder="••••"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest pl-1 mb-1 block">Nueva Contraseña</label>
+                                        <input 
+                                            type="password"
+                                            value={passNew}
+                                            onChange={e => setPassNew(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 p-3 rounded-xl focus:border-primary outline-none"
+                                            placeholder="Nueva clave..."
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    onClick={handleUpdatePass}
+                                    className="w-full bg-primary text-black font-bold py-3 rounded-xl hover:bg-sky-500 transition-all shadow-lg"
+                                >
+                                    Actualizar Contraseña
+                                </button>
+                                
+                                <p className="text-[10px] text-gray-500 text-center italic">
+                                    Nota: Esta contraseña es para EL PANEL DE LA LANDING. La de la sección LIGA se gestiona de forma independiente para mayor seguridad.
+                                </p>
                             </div>
                         </div>
                     )}
