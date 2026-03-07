@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { messaging, getToken, onMessage, db, doc, setDoc } from '../services/firebase';
 
 export const useNotifications = () => {
-    const [permission, setPermission] = useState(Notification.permission);
+    const [permission, setPermission] = useState('Notification' in window ? Notification.permission : 'default');
     const [fcmToken, setFcmToken] = useState(null);
 
     const requestPermission = async () => {
@@ -69,7 +69,7 @@ export const useNotifications = () => {
                     console.log('Message received. ', payload);
                     // System notification for foreground if desired, or custom UI toast
                     // Using standard Notification API for consistency
-                    if (Notification.permission === 'granted') {
+                    if ('Notification' in window && Notification.permission === 'granted') {
                         new Notification(payload.notification.title, {
                             body: payload.notification.body,
                             icon: '/logo.png'
