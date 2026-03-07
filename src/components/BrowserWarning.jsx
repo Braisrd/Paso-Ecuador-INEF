@@ -20,11 +20,11 @@ const BrowserWarning = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <h2 className="text-2xl font-bold text-white">
-                            Estás navegando desde Instagram
+                        <h2 className="text-2xl font-bold text-white text-glow">
+                            ⚠️ Estás usando el navegador de Instagram
                         </h2>
-                        <p className="text-gray-300">
-                            Para asegurar que todas las funciones de la web funcionen correctamente, por favor abre la página en tu navegador predeterminado.
+                        <p className="text-gray-300 font-medium">
+                            y algunas cosas fallarán. Por favor, pulsa los 3 puntos arriba a la derecha y selecciona <strong>"Abrir en el navegador"</strong> para una experiencia completa.
                         </p>
                     </div>
 
