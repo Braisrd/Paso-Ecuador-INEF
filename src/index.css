@@ -116,6 +116,7 @@ html,
 .rank-1 {
     background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
     -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     background-clip: text;
     color: transparent;
     text-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
@@ -124,6 +125,7 @@ html,
 .rank-2 {
     background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
     -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     background-clip: text;
     color: transparent;
 }
@@ -131,6 +133,7 @@ html,
 .rank-3 {
     background: linear-gradient(135deg, #fdba74 0%, #c2410c 100%);
     -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     background-clip: text;
     color: transparent;
 }
