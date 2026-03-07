@@ -22,22 +22,8 @@ function App() {
         return <BrowserWarning />;
     }
 
-    // Senior Debugger: Robust basename calculation (Instruction 2)
-    const getBasename = () => {
-        try {
-            const host = window.location.hostname;
-            // Strict check for GitHub Pages, ignoring any path-based confusion
-            if (host.includes('github.io')) {
-                return '/Paso-Ecuador-INEF';
-            }
-        } catch (e) {
-            console.error("Error detecting basename context:", e);
-        }
-        return '/';
-    };
-
     return (
-        <Router basename={getBasename()}>
+        <Router>
             <ScrollToTop />
             <div className="min-h-[100dvh] w-full">
                 <Routes>
