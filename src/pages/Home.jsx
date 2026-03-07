@@ -179,9 +179,9 @@ const Home = () => {
                     <span className="text-sky-400 text-glow">ECUADOR</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-gray-400 font-light tracking-[0.2em] mb-12 uppercase">INEF 25/26</p>
-                <a href="#events" className="px-10 py-4 rounded-full bg-sky-400 text-black font-black text-lg hover:shadow-[0_0_30px_rgba(56,189,248,0.5)] transition-all transform hover:scale-105">
+                <button onClick={() => document.getElementById('events').scrollIntoView({ behavior: 'smooth' })} className="px-10 py-4 rounded-full bg-sky-400 text-black font-black text-lg hover:shadow-[0_0_30px_rgba(56,189,248,0.5)] transition-all transform hover:scale-105 cursor-pointer">
                     PRÓXIMOS EVENTOS
-                </a>
+                </button>
             </section>
 
             {/* Special Sections (Landing Content) */}
