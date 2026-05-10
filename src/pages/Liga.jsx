@@ -60,8 +60,9 @@ const Modal = ({ isOpen, onClose, children }) => {
 };
 
 const PlayerCard = ({ player, rank, onClick }) => {
-    const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'text-gray-500';
-    const bgClass = rank === 1 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-[#1c1c2e]/50 hover:bg-[#1c1c2e] border-white/5';
+    const isPE = player.isPasoEcuador;
+    const rankClass = isPE ? 'text-blue-400' : rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'text-gray-500';
+    const bgClass = isPE ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' : rank === 1 ? 'bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-[#1c1c2e]/50 hover:bg-[#1c1c2e] border-white/5';
 
     return (
         <div
@@ -69,14 +70,22 @@ const PlayerCard = ({ player, rank, onClick }) => {
             className={`group relative flex items-center p-4 rounded-xl border transition-all duration-300 cursor-pointer ${bgClass}`}
         >
             <div className={`w-12 h-12 flex items-center justify-center text-2xl font-black mr-4 ${rankClass}`}>
-                {rank <= 3 ? '#' + rank : rank}
+                {isPE ? <Ghost className="w-6 h-6" /> : (rank <= 3 ? '#' + rank : rank)}
             </div>
 
             <div className="flex-1">
-                <h3 className={`font-bold text-lg ${rank === 1 ? 'text-white' : 'text-gray-200'} group-hover:text-primary transition-colors`}>
+                <h3 className={`font-bold text-lg ${isPE ? 'text-blue-300' : rank === 1 ? 'text-white' : 'text-gray-200'} group-hover:text-primary transition-colors`}>
                     {player.name}
                 </h3>
-                {rank === 1 && <span className="text-xs text-yellow-500 font-medium tracking-wider">LÍDER ACTUAL</span>}
+                {rank === 1 && !isPE && <span className="text-xs text-yellow-500 font-medium tracking-wider">LÍDER ACTUAL</span>}
+                {isPE && (
+                    <div className="flex flex-col mt-1">
+                        <span className="text-xs text-blue-400 font-medium tracking-wider flex items-center gap-1">
+                            <Shield className="w-3 h-3" /> PASO DE ECUADOR
+                        </span>
+                        <span className="text-[10px] text-gray-500 italic">(no cuenta para clasificación)</span>
+                    </div>
+                )}
             </div>
 
             <div className="text-right">
@@ -128,7 +137,8 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                     points: 0, 
                     history: [], 
                     wins: [], 
-                    aliases: p.aliases || [] 
+                    aliases: p.aliases || [],
+                    isPasoEcuador: p.isPasoEcuador || false
                 };
             });
 
@@ -179,7 +189,8 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                     await updateDoc(doc(db, "players", p.id), {
                         points: p.points,
                         history: p.history,
-                        wins: p.wins
+                        wins: p.wins,
+                        isPasoEcuador: p.isPasoEcuador || false
                     });
                 } else {
                     await addDoc(collection(db, "players"), {
@@ -187,7 +198,8 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                         points: p.points,
                         history: p.history,
                         wins: p.wins,
-                        aliases: p.aliases
+                        aliases: p.aliases,
+                        isPasoEcuador: p.isPasoEcuador || false
                     });
                 }
             }
@@ -651,6 +663,28 @@ const AdminPanel = ({ players, tournaments, processTournament, mergePlayers, del
                                     </div>
                                 </div>
 
+                                {/* Section: Paso de Ecuador Tag */}
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-2">Configuración Especial</h4>
+                                    <button 
+                                        onClick={async () => {
+                                            try {
+                                                const newVal = !editingPlayer.isPasoEcuador;
+                                                await updateDoc(doc(db, "players", editingPlayer.id), {
+                                                    isPasoEcuador: newVal
+                                                });
+                                                setEditingPlayer({...editingPlayer, isPasoEcuador: newVal});
+                                            } catch(e) {
+                                                alert("Error: " + e.message);
+                                            }
+                                        }}
+                                        className={`w-full py-3 border rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${editingPlayer.isPasoEcuador ? 'bg-blue-500/20 border-blue-500 text-blue-400 hover:bg-blue-500/30' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                    >
+                                        <Ghost className="w-4 h-4" /> 
+                                        {editingPlayer.isPasoEcuador ? 'Quitar Etiqueta Paso de Ecuador' : 'Añadir Etiqueta Paso de Ecuador'}
+                                    </button>
+                                </div>
+
                                 {/* Section: Current Aliases Management */}
                                 {editingPlayer.aliases && editingPlayer.aliases.length > 0 && (
                                     <div className="space-y-4">
@@ -1087,11 +1121,18 @@ const Liga = () => {
         });
 
         let currentRank = 1;
+        let lastNormalPoints = null;
+
         for (let i = 0; i < list.length; i++) {
-            if (i > 0 && list[i].displayPoints < list[i - 1].displayPoints) {
-                currentRank++;
+            if (list[i].isPasoEcuador) {
+                list[i].realRank = 'PE';
+            } else {
+                if (lastNormalPoints !== null && list[i].displayPoints < lastNormalPoints) {
+                    currentRank++;
+                }
+                list[i].realRank = currentRank;
+                lastNormalPoints = list[i].displayPoints;
             }
-            list[i].realRank = currentRank;
         }
 
         if (searchTerm) {
